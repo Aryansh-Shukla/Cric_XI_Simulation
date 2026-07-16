@@ -1,24 +1,56 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import { Landing } from "@/components/cricket/Landing";
+import { ModeSelect } from "@/components/cricket/ModeSelect";
+import { Draft } from "@/components/cricket/Draft";
+import { TeamView } from "@/components/cricket/TeamView";
+import { TournamentView } from "@/components/cricket/TournamentView";
+import type { Difficulty, GameMode, Player } from "@/lib/cricket/types";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
+type Screen = "landing" | "mode" | "draft" | "team" | "tournament";
+
 function Index() {
+  const [screen, setScreen] = useState<Screen>("landing");
+  const [mode, setMode] = useState<GameMode>("ODI_WC");
+  const [difficulty, setDifficulty] = useState<Difficulty>("Medium");
+  const [players, setPlayers] = useState<Player[]>([]);
+
+  const reset = () => {
+    setPlayers([]);
+    setScreen("mode");
+  };
+
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+    <div className="min-h-screen bg-background text-foreground">
+      {screen === "landing" && <Landing onPlay={() => setScreen("mode")} />}
+      {screen === "mode" && (
+        <ModeSelect
+          onBack={() => setScreen("landing")}
+          onStart={(m, d) => { setMode(m); setDifficulty(d); setPlayers([]); setScreen("draft"); }}
+        />
+      )}
+      {screen === "draft" && (
+        <Draft
+          mode={mode}
+          difficulty={difficulty}
+          onComplete={(p) => { setPlayers(p); setScreen("team"); }}
+        />
+      )}
+      {screen === "team" && (
+        <TeamView
+          players={players}
+          mode={mode}
+          onSimulate={() => setScreen("tournament")}
+          onRestart={reset}
+        />
+      )}
+      {screen === "tournament" && (
+        <TournamentView players={players} mode={mode} onRestart={reset} />
+      )}
     </div>
   );
 }
