@@ -7,6 +7,7 @@ import { activatedChemistry } from "@/lib/cricket/simulation";
 interface Props {
   players: Player[];
   mode: GameMode;
+  leadership?: { captainId: string; viceCaptainId: string; keeperId: string } | null;
   onSimulate: () => void;
   onRestart: () => void;
 }
@@ -21,10 +22,11 @@ const POSITIONS: [number, number][] = [
   [50, 90],
 ];
 
-export function TeamView({ players, mode, onSimulate, onRestart }: Props) {
+export function TeamView({ players, mode, leadership, onSimulate, onRestart }: Props) {
   const v = validateTeam(players, mode);
-  const captain = pickCaptain(players);
-  const vice = pickViceCaptain(players, captain);
+  const captain = (leadership && players.find(p => p.id === leadership.captainId)) || pickCaptain(players);
+  const vice = (leadership && players.find(p => p.id === leadership.viceCaptainId)) || pickViceCaptain(players, captain);
+  const keeper = (leadership && players.find(p => p.id === leadership.keeperId)) || players.find(p => p.role === "Wicketkeeper");
   const chem = activatedChemistry(players);
 
   return (
@@ -124,7 +126,7 @@ export function TeamView({ players, mode, onSimulate, onRestart }: Props) {
                 <div className="flex items-center justify-between"><span>Captain</span><span className="font-semibold text-gold">{captain.name}</span></div>
                 <div className="flex items-center justify-between"><span>Vice Captain</span><span className="font-semibold">{vice.name}</span></div>
                 <div className="flex items-center justify-between"><span className="inline-flex items-center gap-1"><Shield className="h-3 w-3" />Keeper</span>
-                  <span className="font-semibold">{players.find(p => p.role === "Wicketkeeper")?.name ?? "—"}</span></div>
+                  <span className="font-semibold">{keeper?.name ?? "—"}</span></div>
               </div>
             </div>
 

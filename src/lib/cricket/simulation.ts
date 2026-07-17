@@ -118,10 +118,10 @@ export interface Tournament {
   seed: number;
 }
 
-export function simulateTournament(players: Player[], mode: GameMode, seed = Date.now()): Tournament {
+export function simulateTournament(players: Player[], mode: GameMode, seed = Date.now(), captainId?: string): Tournament {
   const rng = mulberry32(seed);
   const opponents = generateOpponents(mode, rng);
-  const captain = pickCaptain(players);
+  const captain = (captainId && players.find(p => p.id === captainId)) || pickCaptain(players);
   const { total: chem } = chemistryBonus(players);
   const baseRating = teamRating(players) + chem + captain.stats.leadership * 0.03;
 
