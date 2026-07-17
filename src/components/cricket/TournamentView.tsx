@@ -8,6 +8,7 @@ import { MODE_LABELS } from "@/lib/cricket/data";
 interface Props {
   players: Player[];
   mode: GameMode;
+  leadership?: { captainId: string; viceCaptainId: string; keeperId: string } | null;
   onRestart: () => void;
 }
 
@@ -20,8 +21,8 @@ const weatherIcon = (w: Weather) => {
   }
 };
 
-export function TournamentView({ players, mode, onRestart }: Props) {
-  const [t] = useState<Tournament>(() => simulateTournament(players, mode));
+export function TournamentView({ players, mode, leadership, onRestart }: Props) {
+  const [t] = useState<Tournament>(() => simulateTournament(players, mode, undefined, leadership?.captainId));
   const [revealed, setRevealed] = useState(0);
 
   useEffect(() => {

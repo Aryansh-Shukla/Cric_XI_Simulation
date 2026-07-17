@@ -251,20 +251,254 @@ const india2018Test: Squad = makeSquad("India 2018", "India", 2018, "TEST", [
   p("Hanuma Vihari", "India", "Batsman", { batting: 74 }),
 ]);
 
+/* ---------- Generated wide catalog (algorithmically approximated ratings) ---------- */
+
+type PoolEntry = [string, Role, Partial<Player["stats"]>, Trait[]?];
+function bump(base: number, seed: number, spread = 6) {
+  return Math.max(40, Math.min(99, Math.round(base + ((seed % (spread * 2)) - spread))));
+}
+function seedFrom(str: string) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+function gen(
+  label: string, country: string, year: number, mode: GameMode,
+  captainName: string, pool: PoolEntry[], overseasNames: string[] = [],
+): Squad {
+  const s = seedFrom(label);
+  const players = pool.map(([name, role, stats, traits], i): Player => {
+    const seed = seedFrom(label + name) + i;
+    const jittered: Partial<Player["stats"]> = {};
+    (Object.keys(stats) as (keyof Player["stats"])[]).forEach(k => {
+      const v = stats[k];
+      if (typeof v === "number") jittered[k] = bump(v, seed + (k.length * 7));
+    });
+    return p(name, country, role, jittered, traits ?? [], {
+      isCaptain: name === captainName,
+      isOverseas: overseasNames.includes(name),
+    });
+  });
+  void s;
+  return makeSquad(label, country, year, mode, players);
+}
+
+/* ---------- ODI extras ---------- */
+const india2023: Squad = gen("India 2023", "India", 2023, "ODI_WC", "Rohit Sharma", [
+  ["Rohit Sharma", "Batsman",     { batting: 92, leadership: 90 }, ["Captain Fantastic", "Powerplay Destroyer"]],
+  ["Shubman Gill", "Batsman",     { batting: 88 }, ["Run Machine"]],
+  ["Virat Kohli",  "Batsman",     { batting: 96, consistency: 94 }, ["Run Machine", "Wall"]],
+  ["Shreyas Iyer", "Batsman",     { batting: 84 }],
+  ["KL Rahul",     "Wicketkeeper",{ batting: 84 }],
+  ["Suryakumar Yadav", "Batsman", { batting: 86 }, ["Finisher"]],
+  ["Ravindra Jadeja", "AllRounder", { batting: 78, bowling: 86 }, ["Spin Wizard"]],
+  ["Kuldeep Yadav", "SpinBowler", { bowling: 86 }, ["Spin Wizard"]],
+  ["Jasprit Bumrah","PaceBowler", { bowling: 96 }, ["Strike Bowler", "Ice Veins"]],
+  ["Mohammed Shami","PaceBowler", { bowling: 92 }, ["Strike Bowler"]],
+  ["Mohammed Siraj","PaceBowler", { bowling: 86 }],
+]);
+
+const nz2019: Squad = gen("New Zealand 2019", "New Zealand", 2019, "ODI_WC", "Kane Williamson", [
+  ["Kane Williamson", "Batsman", { batting: 92, leadership: 92 }, ["Captain Fantastic", "Wall"]],
+  ["Martin Guptill", "Batsman", { batting: 84 }, ["Powerplay Destroyer"]],
+  ["Ross Taylor", "Batsman", { batting: 86 }],
+  ["Tom Latham", "Wicketkeeper", { batting: 80 }],
+  ["Jimmy Neesham", "AllRounder", { batting: 76, bowling: 78 }],
+  ["Colin de Grandhomme", "AllRounder", { batting: 74, bowling: 74 }],
+  ["Mitchell Santner", "SpinBowler", { bowling: 80 }],
+  ["Trent Boult", "PaceBowler", { bowling: 92 }, ["Strike Bowler"]],
+  ["Matt Henry", "PaceBowler", { bowling: 84 }],
+  ["Lockie Ferguson", "PaceBowler", { bowling: 86 }, ["Strike Bowler"]],
+  ["Henry Nicholls", "Batsman", { batting: 78 }],
+]);
+
+const sa1999: Squad = gen("South Africa 1999", "South Africa", 1999, "ODI_WC", "Hansie Cronje", [
+  ["Hansie Cronje", "AllRounder", { batting: 78, bowling: 72, leadership: 90 }, ["Captain Fantastic"]],
+  ["Jacques Kallis", "AllRounder", { batting: 90, bowling: 82 }, ["Wall"]],
+  ["Lance Klusener", "AllRounder", { batting: 88, bowling: 84, pressure: 94 }, ["Finisher", "Ice Veins"]],
+  ["Herschelle Gibbs", "Batsman", { batting: 86 }, ["Powerplay Destroyer"]],
+  ["Gary Kirsten", "Batsman", { batting: 84 }],
+  ["Shaun Pollock", "AllRounder", { batting: 74, bowling: 90 }, ["Strike Bowler"]],
+  ["Allan Donald", "PaceBowler", { bowling: 94 }, ["Strike Bowler"]],
+  ["Mark Boucher", "Wicketkeeper", { batting: 78 }],
+  ["Nicky Boje", "SpinBowler", { bowling: 76 }],
+  ["Steve Elworthy", "PaceBowler", { bowling: 78 }],
+  ["Daryll Cullinan", "Batsman", { batting: 80 }],
+]);
+
+const sl1996: Squad = gen("Sri Lanka 1996", "Sri Lanka", 1996, "ODI_WC", "Arjuna Ranatunga", [
+  ["Arjuna Ranatunga", "Batsman", { batting: 82, leadership: 94 }, ["Captain Fantastic"]],
+  ["Sanath Jayasuriya", "AllRounder", { batting: 90, bowling: 76 }, ["Powerplay Destroyer"]],
+  ["Aravinda de Silva", "Batsman", { batting: 92, pressure: 92 }, ["Big Match Player"]],
+  ["Romesh Kaluwitharana", "Wicketkeeper", { batting: 80 }, ["Powerplay Destroyer"]],
+  ["Roshan Mahanama", "Batsman", { batting: 78 }],
+  ["Hashan Tillakaratne", "Batsman", { batting: 78 }],
+  ["Muttiah Muralitharan", "SpinBowler", { bowling: 96 }, ["Spin Wizard"]],
+  ["Chaminda Vaas", "PaceBowler", { bowling: 86 }, ["Strike Bowler"]],
+  ["Kumar Dharmasena", "SpinBowler", { bowling: 78 }],
+  ["Pramodya Wickramasinghe", "PaceBowler", { bowling: 78 }],
+  ["Asanka Gurusinha", "Batsman", { batting: 78 }],
+]);
+
+const australia2015: Squad = gen("Australia 2015", "Australia", 2015, "ODI_WC", "Michael Clarke", [
+  ["Michael Clarke", "Batsman", { batting: 86, leadership: 88 }, ["Captain Fantastic"]],
+  ["David Warner", "Batsman", { batting: 90 }, ["Powerplay Destroyer"]],
+  ["Steve Smith", "Batsman", { batting: 92 }, ["Run Machine"]],
+  ["Aaron Finch", "Batsman", { batting: 84 }],
+  ["Glenn Maxwell", "AllRounder", { batting: 86, bowling: 74 }, ["Finisher"]],
+  ["Brad Haddin", "Wicketkeeper", { batting: 80 }],
+  ["James Faulkner", "AllRounder", { batting: 76, bowling: 82 }, ["Death Overs Specialist"]],
+  ["Mitchell Starc", "PaceBowler", { bowling: 96 }, ["Strike Bowler"]],
+  ["Mitchell Johnson", "PaceBowler", { bowling: 92 }, ["Strike Bowler"]],
+  ["Josh Hazlewood", "PaceBowler", { bowling: 86 }],
+  ["Shane Watson", "AllRounder", { batting: 82, bowling: 76 }],
+]);
+
+/* ---------- T20 extras ---------- */
+const india2024T20: Squad = gen("India 2024", "India", 2024, "T20_WC", "Rohit Sharma", [
+  ["Rohit Sharma", "Batsman", { batting: 92, leadership: 92 }, ["Captain Fantastic", "Powerplay Destroyer"]],
+  ["Virat Kohli", "Batsman", { batting: 90 }, ["Run Machine"]],
+  ["Rishabh Pant", "Wicketkeeper", { batting: 86 }, ["Clutch Performer"]],
+  ["Suryakumar Yadav", "Batsman", { batting: 92 }, ["Finisher"]],
+  ["Hardik Pandya", "AllRounder", { batting: 82, bowling: 80 }, ["Finisher"]],
+  ["Ravindra Jadeja", "AllRounder", { batting: 76, bowling: 84 }],
+  ["Axar Patel", "AllRounder", { batting: 74, bowling: 82 }],
+  ["Kuldeep Yadav", "SpinBowler", { bowling: 88 }, ["Spin Wizard"]],
+  ["Jasprit Bumrah", "PaceBowler", { bowling: 98, pressure: 96 }, ["Strike Bowler", "Ice Veins", "Death Overs Specialist"]],
+  ["Arshdeep Singh", "PaceBowler", { bowling: 84 }, ["Death Overs Specialist"]],
+  ["Shivam Dube", "AllRounder", { batting: 78, bowling: 68 }],
+]);
+
+const england2010T20: Squad = gen("England 2010", "England", 2010, "T20_WC", "Paul Collingwood", [
+  ["Paul Collingwood", "AllRounder", { batting: 78, bowling: 70, leadership: 86 }, ["Captain Fantastic"]],
+  ["Kevin Pietersen", "Batsman", { batting: 92, pressure: 90 }, ["Big Match Player"]],
+  ["Craig Kieswetter", "Wicketkeeper", { batting: 82 }],
+  ["Michael Lumb", "Batsman", { batting: 78 }],
+  ["Eoin Morgan", "Batsman", { batting: 84 }, ["Finisher"]],
+  ["Luke Wright", "AllRounder", { batting: 76, bowling: 72 }],
+  ["Graeme Swann", "SpinBowler", { bowling: 88 }, ["Spin Wizard"]],
+  ["Stuart Broad", "PaceBowler", { bowling: 86 }, ["Strike Bowler"]],
+  ["Ryan Sidebottom", "PaceBowler", { bowling: 82 }],
+  ["Tim Bresnan", "AllRounder", { batting: 70, bowling: 78 }],
+  ["Michael Yardy", "SpinBowler", { bowling: 74 }],
+]);
+
+const pakistan2009T20: Squad = gen("Pakistan 2009", "Pakistan", 2009, "T20_WC", "Younis Khan", [
+  ["Younis Khan", "Batsman", { batting: 84, leadership: 88 }, ["Captain Fantastic"]],
+  ["Shahid Afridi", "AllRounder", { batting: 82, bowling: 82, pressure: 88 }, ["Clutch Performer", "Big Match Player"]],
+  ["Umar Akmal", "Batsman", { batting: 80 }],
+  ["Kamran Akmal", "Wicketkeeper", { batting: 78 }],
+  ["Misbah-ul-Haq", "Batsman", { batting: 82 }],
+  ["Shoaib Malik", "AllRounder", { batting: 78, bowling: 74 }],
+  ["Umar Gul", "PaceBowler", { bowling: 90 }, ["Death Overs Specialist", "Strike Bowler"]],
+  ["Mohammad Aamer", "PaceBowler", { bowling: 86 }, ["Strike Bowler"]],
+  ["Saeed Ajmal", "SpinBowler", { bowling: 88 }, ["Spin Wizard"]],
+  ["Abdul Razzaq", "AllRounder", { batting: 76, bowling: 78 }],
+  ["Fawad Alam", "Batsman", { batting: 74 }],
+]);
+
+/* ---------- Champions Trophy extras ---------- */
+const australia2006CT: Squad = gen("Australia 2006", "Australia", 2006, "CHAMPIONS", "Ricky Ponting", [
+  ["Ricky Ponting", "Batsman", { batting: 94, leadership: 92 }, ["Captain Fantastic"]],
+  ["Adam Gilchrist", "Wicketkeeper", { batting: 92 }, ["Powerplay Destroyer"]],
+  ["Matthew Hayden", "Batsman", { batting: 90 }],
+  ["Michael Hussey", "Batsman", { batting: 88, pressure: 92 }, ["Ice Veins"]],
+  ["Damien Martyn", "Batsman", { batting: 84 }],
+  ["Andrew Symonds", "AllRounder", { batting: 84, bowling: 74 }],
+  ["Shane Watson", "AllRounder", { batting: 78, bowling: 76 }],
+  ["Brett Lee", "PaceBowler", { bowling: 92 }, ["Strike Bowler"]],
+  ["Glenn McGrath", "PaceBowler", { bowling: 94 }, ["Strike Bowler"]],
+  ["Nathan Bracken", "PaceBowler", { bowling: 82 }],
+  ["Brad Hogg", "SpinBowler", { bowling: 80 }],
+]);
+
+/* ---------- Franchise extras ---------- */
+const cskLegends: Squad = gen("Chennai Kings 2010", "Franchise", 2010, "FRANCHISE_T20", "MS Dhoni", [
+  ["MS Dhoni", "Wicketkeeper", { batting: 88, leadership: 96 }, ["Captain Fantastic", "Finisher"]],
+  ["Suresh Raina", "AllRounder", { batting: 84, bowling: 66, fielding: 92 }, ["Finisher"]],
+  ["Murali Vijay", "Batsman", { batting: 82 }],
+  ["Matthew Hayden", "Batsman", { batting: 88 }, ["Powerplay Destroyer"]],
+  ["Michael Hussey", "Batsman", { batting: 86, pressure: 92 }, ["Ice Veins"]],
+  ["Doug Bollinger", "PaceBowler", { bowling: 82 }],
+  ["Muttiah Muralitharan", "SpinBowler", { bowling: 92 }, ["Spin Wizard"]],
+  ["Albie Morkel", "AllRounder", { batting: 76, bowling: 78 }, ["Finisher"]],
+  ["R Ashwin", "SpinBowler", { bowling: 84 }, ["Spin Wizard"]],
+  ["Joginder Sharma", "PaceBowler", { bowling: 70 }],
+  ["S Badrinath", "Batsman", { batting: 76 }],
+], ["Matthew Hayden", "Michael Hussey", "Doug Bollinger", "Muttiah Muralitharan", "Albie Morkel"]);
+
+const rcbFire: Squad = gen("Bangalore Royals 2016", "Franchise", 2016, "FRANCHISE_T20", "Virat Kohli", [
+  ["Virat Kohli", "Batsman", { batting: 98, leadership: 88 }, ["Captain Fantastic", "Run Machine"]],
+  ["AB de Villiers", "Wicketkeeper", { batting: 96 }, ["Finisher", "Powerplay Destroyer"]],
+  ["Chris Gayle", "Batsman", { batting: 94 }, ["Powerplay Destroyer"]],
+  ["KL Rahul", "Batsman", { batting: 82 }],
+  ["Shane Watson", "AllRounder", { batting: 80, bowling: 74 }],
+  ["Sachin Baby", "Batsman", { batting: 70 }],
+  ["Yuzvendra Chahal", "SpinBowler", { bowling: 86 }, ["Spin Wizard"]],
+  ["Chris Jordan", "PaceBowler", { bowling: 82 }, ["Death Overs Specialist"]],
+  ["Sreenath Aravind", "PaceBowler", { bowling: 76 }],
+  ["Iqbal Abdulla", "SpinBowler", { bowling: 74 }],
+  ["Stuart Binny", "AllRounder", { batting: 72, bowling: 72 }],
+], ["AB de Villiers", "Chris Gayle", "Shane Watson", "Chris Jordan"]);
+
+const kkrRoyals: Squad = gen("Kolkata Riders 2014", "Franchise", 2014, "FRANCHISE_T20", "Gautam Gambhir", [
+  ["Gautam Gambhir", "Batsman", { batting: 84, leadership: 90 }, ["Captain Fantastic", "Wall"]],
+  ["Robin Uthappa", "Batsman", { batting: 84 }, ["Powerplay Destroyer"]],
+  ["Manish Pandey", "Batsman", { batting: 80 }],
+  ["Yusuf Pathan", "AllRounder", { batting: 80, bowling: 68 }, ["Finisher"]],
+  ["Ryan ten Doeschate", "AllRounder", { batting: 74, bowling: 72 }],
+  ["Piyush Chawla", "SpinBowler", { bowling: 80 }],
+  ["Sunil Narine", "SpinBowler", { bowling: 94 }, ["Spin Wizard", "Strike Bowler"]],
+  ["Morne Morkel", "PaceBowler", { bowling: 86 }, ["Strike Bowler"]],
+  ["Umesh Yadav", "PaceBowler", { bowling: 82 }],
+  ["Andre Russell", "AllRounder", { batting: 84, bowling: 80 }, ["Finisher"]],
+  ["Wriddhiman Saha", "Wicketkeeper", { batting: 76 }],
+], ["Ryan ten Doeschate", "Sunil Narine", "Morne Morkel", "Andre Russell"]);
+
+/* ---------- Test extras ---------- */
+const england2005Test: Squad = gen("England 2005", "England", 2005, "TEST", "Michael Vaughan", [
+  ["Michael Vaughan", "Batsman", { batting: 84, leadership: 90 }, ["Captain Fantastic"]],
+  ["Andrew Strauss", "Batsman", { batting: 86 }, ["Wall"]],
+  ["Marcus Trescothick", "Batsman", { batting: 86 }],
+  ["Kevin Pietersen", "Batsman", { batting: 90, pressure: 90 }, ["Big Match Player"]],
+  ["Andrew Flintoff", "AllRounder", { batting: 84, bowling: 88, pressure: 92 }, ["Big Match Player"]],
+  ["Geraint Jones", "Wicketkeeper", { batting: 76 }],
+  ["Ashley Giles", "SpinBowler", { bowling: 78 }],
+  ["Matthew Hoggard", "PaceBowler", { bowling: 86 }, ["Strike Bowler"]],
+  ["Steve Harmison", "PaceBowler", { bowling: 88 }, ["Strike Bowler"]],
+  ["Simon Jones", "PaceBowler", { bowling: 84 }],
+  ["Ian Bell", "Batsman", { batting: 82 }],
+]);
+
+const wi1984Test: Squad = gen("West Indies 1984", "West Indies", 1984, "TEST", "Clive Lloyd", [
+  ["Clive Lloyd", "Batsman", { batting: 86, leadership: 94 }, ["Captain Fantastic"]],
+  ["Viv Richards", "Batsman", { batting: 96 }, ["Run Machine"]],
+  ["Gordon Greenidge", "Batsman", { batting: 90 }, ["Powerplay Destroyer"]],
+  ["Desmond Haynes", "Batsman", { batting: 86 }],
+  ["Larry Gomes", "Batsman", { batting: 80 }],
+  ["Jeff Dujon", "Wicketkeeper", { batting: 78 }],
+  ["Malcolm Marshall", "PaceBowler", { bowling: 98 }, ["Strike Bowler"]],
+  ["Michael Holding", "PaceBowler", { bowling: 94 }, ["Strike Bowler"]],
+  ["Joel Garner", "PaceBowler", { bowling: 94 }],
+  ["Andy Roberts", "PaceBowler", { bowling: 90 }, ["Strike Bowler"]],
+  ["Roger Harper", "SpinBowler", { bowling: 76 }],
+]);
+
 export const ALL_SQUADS: Squad[] = [
   india2011, australia2003, australia1999, england2019, pakistan1992, westindies1979,
-  india2007T20, westindies2016, australia2021T20,
-  pakistan2017, india2013,
-  chennaiKings, mumbaiTitans,
-  australia2005Test, india2018Test,
+  india2023, nz2019, sa1999, sl1996, australia2015,
+  india2007T20, westindies2016, australia2021T20, india2024T20, england2010T20, pakistan2009T20,
+  pakistan2017, india2013, australia2006CT,
+  chennaiKings, mumbaiTitans, cskLegends, rcbFire, kkrRoyals,
+  australia2005Test, india2018Test, england2005Test, wi1984Test,
 ];
 
 export const SQUADS_BY_MODE: Record<GameMode, Squad[]> = {
-  ODI_WC: [india2011, australia2003, australia1999, england2019, pakistan1992, westindies1979],
-  T20_WC: [india2007T20, westindies2016, australia2021T20],
-  CHAMPIONS: [pakistan2017, india2013],
-  FRANCHISE_T20: [chennaiKings, mumbaiTitans],
-  TEST: [australia2005Test, india2018Test],
+  ODI_WC:        [india2011, australia2003, australia1999, england2019, pakistan1992, westindies1979, india2023, nz2019, sa1999, sl1996, australia2015],
+  T20_WC:        [india2007T20, westindies2016, australia2021T20, india2024T20, england2010T20, pakistan2009T20],
+  CHAMPIONS:     [pakistan2017, india2013, australia2006CT],
+  FRANCHISE_T20: [chennaiKings, mumbaiTitans, cskLegends, rcbFire, kkrRoyals],
+  TEST:          [australia2005Test, india2018Test, england2005Test, wi1984Test],
 };
 
 export const MODE_LABELS: Record<GameMode, { title: string; subtitle: string; format: string }> = {
