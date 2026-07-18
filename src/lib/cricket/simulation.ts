@@ -3,9 +3,9 @@ import type {
   Innings, LimitedScorecard, TestScorecard, StageKind,
 } from "./types";
 import { KNOCKOUT_STAGES } from "./types";
-import { CHEMISTRY, SQUADS_BY_MODE, overall } from "./data";
+import { CHEMISTRY, SQUADS_BY_MODE } from "./data";
 import { pickCaptain } from "./rules";
-import { computeTeamRating } from "./rating";
+import { computeTeamRating, overall } from "./rating";
 
 // Deterministic-ish PRNG so results are reproducible per game
 function mulberry32(seed: number) {
