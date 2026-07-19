@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Crown, Shield, Zap, Wind, Star } from "lucide-react";
 import type { Player, Difficulty } from "@/lib/cricket/types";
+import { overall } from "@/lib/cricket/rating";
 
 const roleBadge = (role: Player["role"]) => {
   switch (role) {
@@ -30,6 +31,17 @@ export function PlayerCard({
   const showRole = difficulty === "Easy";
   const showCountry = difficulty === "Easy" || difficulty === "Medium";
   const initials = player.name.split(" ").map(n => n[0]).join("").slice(0, 2);
+  const rating = overall(player);
+  const ratingTone =
+    rating >= 90 ? "text-gold border-[color:var(--gold)]/50 bg-[color:var(--gold)]/10"
+    : rating >= 80 ? "text-[color:var(--accent)] border-[color:var(--accent)]/40 bg-[color:var(--accent)]/10"
+    : "text-foreground border-[color:var(--border)] bg-[color:var(--muted)]/60";
+  const roleShort =
+    player.role === "Batsman" ? "BAT"
+    : player.role === "Wicketkeeper" ? "WK"
+    : player.role === "AllRounder" ? "AR"
+    : player.role === "PaceBowler" ? "PACE"
+    : "SPIN";
 
   return (
     <motion.button
@@ -58,6 +70,11 @@ export function PlayerCard({
             {squadLabel && showCountry && <span className="opacity-40">•</span>}
             {squadLabel && <span className="truncate">{squadLabel}</span>}
           </div>
+        </div>
+        <div className={`flex shrink-0 flex-col items-center rounded-lg border px-2 py-1 ${ratingTone}`}>
+          <div className="text-[9px] font-semibold uppercase tracking-wider opacity-80">{roleShort}</div>
+          <div className="text-lg font-black leading-none">{rating}</div>
+          <div className="text-[8px] uppercase tracking-widest opacity-60">OVR</div>
         </div>
       </div>
 
