@@ -6,6 +6,7 @@ import { KNOCKOUT_STAGES } from "./types";
 import { CHEMISTRY, SQUADS_BY_MODE } from "./data";
 import { pickCaptain } from "./rules";
 import { computeTeamRating, overall } from "./rating";
+import { limitedCommentary, testCommentary } from "./commentary";
 
 // Deterministic-ish PRNG so results are reproducible per game
 function mulberry32(seed: number) {
@@ -302,18 +303,11 @@ function simulateLimitedMatch(
   );
   const resultLine = `${weWon ? ourName : opp.name} ${marginText.replace(/^won|lost/, "won")}`;
 
-  const highlights: string[] = [];
-  highlights.push(`Toss: ${tossWinner === "us" ? ourName : opp.name} won and chose to ${tossDecision}.`);
-  highlights.push(`${ourInnings.topScorer.name} anchored with ${ourInnings.topScorer.runs} off ${ourInnings.topScorer.balls}.`);
-  highlights.push(`${(weWon ? ourInnings : oppInnings).bestBowler.name} broke through with a key spell.`);
-  if (weWon) highlights.push(`${ourName} sealed it under pressure.`);
-  else highlights.push(`${opp.name} held their nerve at the death.`);
-
   const potPool = weWon ? ourPlayers : opp.players;
   const potWinner = pickTop(potPool, p => p.stats.batting + p.stats.bowling + p.stats.pressure * 0.5, rng);
 
   const isKnockout = (KNOCKOUT_STAGES as string[]).includes(stage);
-  return {
+  const scaffold: LimitedScorecard = {
     format,
     stage,
     venue,
@@ -328,9 +322,11 @@ function simulateLimitedMatch(
     marginText,
     resultLine,
     playerOfMatch: potWinner.name,
-    highlights,
+    highlights: [],
     eliminated: !weWon && isKnockout,
   };
+  scaffold.highlights = limitedCommentary(scaffold, rng);
+  return scaffold;
 }
 
 /* ---------- Test Match Engine ---------- */
@@ -496,7 +492,7 @@ function simulateTestMatch(
     `Day 5 final session: ${result === "DRAW" ? "tail hung on for the draw." : "chased the result home."}`,
   ].join(" ");
 
-  return {
+  const scaffold: TestScorecard = {
     format: "TEST",
     stage,
     venue,
@@ -511,14 +507,14 @@ function simulateTestMatch(
     marginText,
     resultLine,
     playerOfMatch: potWinner.name,
-    highlights: [
-      `${our1.topScorer.name} ground out ${our1.topScorer.runs} in the first innings.`,
-      `${opp1.bestBowler.name} led the attack with ${opp1.bestBowler.wickets}/${opp1.bestBowler.runs}.`,
-      result === "DRAW" ? "Weather and a flat wicket forced the draw." : `Fourth innings tension decided the Test.`,
-    ],
+    highlights: [],
     sessionsNote,
     eliminated: false,
   };
+  const sessionLines = testCommentary(scaffold, rng);
+  scaffold.highlights = sessionLines;
+  scaffold.sessionsNote = sessionLines.join("  ");
+  return scaffold;
 }
 
 /* ---------- Tournament structures ---------- */

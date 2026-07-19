@@ -276,9 +276,9 @@ function TestCard({ r }: { r: TestScorecard }) {
         <Meta label="Player of the Match" value={r.playerOfMatch} accent />
       </div>
 
-      <div className="border-t border-[color:var(--border)] px-5 py-3 text-xs text-muted-foreground">
-        {r.sessionsNote}
-      </div>
+      <ul className="space-y-1 border-t border-[color:var(--border)] px-5 py-3 text-sm text-muted-foreground">
+        {r.highlights.map((h, k) => <li key={k}>• {h}</li>)}
+      </ul>
     </div>
   );
 }
