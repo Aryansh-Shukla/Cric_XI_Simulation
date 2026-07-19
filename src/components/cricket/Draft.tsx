@@ -1,9 +1,9 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { CheckCircle2, Circle, Lock, Sparkles, Users, Globe2, TrendingUp } from "lucide-react";
+import { CheckCircle2, Circle, Lock, Sparkles, Users, Globe2, TrendingUp, Shuffle, Calendar, Users2, AlertTriangle } from "lucide-react";
 import { PlayerCard } from "./PlayerCard";
 import { SQUADS_BY_MODE, MODE_LABELS } from "@/lib/cricket/data";
-import type { Difficulty, GameMode, Player } from "@/lib/cricket/types";
+import type { Difficulty, GameMode, Player, Squad } from "@/lib/cricket/types";
 import { computeStatus, canPickPlayer, overseasCount, estimatedRating } from "@/lib/cricket/requirements";
 import { activatedChemistry } from "@/lib/cricket/simulation";
 
@@ -22,32 +22,116 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
+const REROLL_LIMIT = 4;
+
+function pickChoices(squad: Squad, picked: Player[], mode: GameMode, remainingSlots: number, prioritizeValid = false): Player[] {
+  const usedIds = new Set(picked.map(p => p.id));
+  const pool = squad.players.filter(p => !usedIds.has(p.id));
+  if (!pool.length) return [];
+  if (prioritizeValid) {
+    const valid = pool.filter(p => canPickPlayer(p, { picked, mode, remainingSlots }).canPick);
+    if (valid.length >= 5) return shuffle(valid).slice(0, 5);
+    const invalid = shuffle(pool.filter(p => !valid.includes(p)));
+    return [...shuffle(valid), ...invalid].slice(0, 5);
+  }
+  return shuffle(pool).slice(0, 5);
+}
+
 export function Draft({ mode, difficulty, onComplete }: Props) {
   const [picked, setPicked] = useState<Player[]>([]);
   const round = picked.length + 1;
-
-  const currentRound = useMemo(() => {
-    const pool = SQUADS_BY_MODE[mode];
-    const usedIds = new Set(picked.map(p => p.id));
-    const squad = shuffle(pool)[0];
-    const choices = shuffle(squad.players.filter(p => !usedIds.has(p.id))).slice(0, 5);
-    return { squad, choices };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [round, mode]);
-
   const remainingSlots = 11 - picked.length;
-  const status = computeStatus(picked, mode);
-  const overseas = overseasCount(picked);
-  const rating = estimatedRating(picked);
-  const chem = activatedChemistry(picked);
+
+  const pool = useMemo(() => SQUADS_BY_MODE[mode], [mode]);
+
+  const [squad, setSquad] = useState<Squad>(() => shuffle(pool)[0]);
+  const [choices, setChoices] = useState<Player[]>(() => pickChoices(pool[0], [], mode, 11));
+  const [recentSquadIds, setRecentSquadIds] = useState<string[]>([]);
+  const [yearRerolls, setYearRerolls] = useState(REROLL_LIMIT);
+  const [teamRerolls, setTeamRerolls] = useState(REROLL_LIMIT);
+
+  // Advance to a fresh squad + choices when a player is picked (round changes)
+  const advanceRound = useCallback((nextPicked: Player[]) => {
+    if (nextPicked.length >= 11) return;
+    const avoid = new Set([...recentSquadIds.slice(-3), squad.id]);
+    const candidates = pool.filter(s => !avoid.has(s.id));
+    const nextSquad = (candidates.length ? shuffle(candidates) : shuffle(pool))[0];
+    setSquad(nextSquad);
+    setChoices(pickChoices(nextSquad, nextPicked, mode, 11 - nextPicked.length));
+    setRecentSquadIds(r => [...r, nextSquad.id].slice(-5));
+  }, [pool, mode, recentSquadIds, squad.id]);
 
   const select = (p: Player) => {
     const check = canPickPlayer(p, { picked, mode, remainingSlots });
     if (!check.canPick) return;
     const next = [...picked, p];
     setPicked(next);
-    if (next.length === 11) setTimeout(() => onComplete(next), 400);
+    if (next.length === 11) {
+      setTimeout(() => onComplete(next), 400);
+    } else {
+      advanceRound(next);
+    }
   };
+
+  const rerollSameYear = () => {
+    if (yearRerolls <= 0) return;
+    const avoid = new Set([...recentSquadIds, squad.id]);
+    let candidates = pool.filter(s => s.year === squad.year && !avoid.has(s.id));
+    if (!candidates.length) candidates = pool.filter(s => s.year === squad.year && s.id !== squad.id);
+    if (!candidates.length) return;
+    const next = shuffle(candidates)[0];
+    setSquad(next);
+    setChoices(pickChoices(next, picked, mode, remainingSlots));
+    setRecentSquadIds(r => [...r, next.id].slice(-5));
+    setYearRerolls(n => n - 1);
+  };
+
+  const rerollSameTeam = () => {
+    if (teamRerolls <= 0) return;
+    const avoid = new Set([...recentSquadIds, squad.id]);
+    let candidates = pool.filter(s => s.country === squad.country && !avoid.has(s.id));
+    if (!candidates.length) candidates = pool.filter(s => s.country === squad.country && s.id !== squad.id);
+    if (!candidates.length) return;
+    const next = shuffle(candidates)[0];
+    setSquad(next);
+    setChoices(pickChoices(next, picked, mode, remainingSlots));
+    setRecentSquadIds(r => [...r, next.id].slice(-5));
+    setTeamRerolls(n => n - 1);
+  };
+
+  const reshuffle = () => {
+    // Try same squad first, prioritizing valid picks
+    const fresh = pickChoices(squad, picked, mode, remainingSlots, true);
+    const anyValid = fresh.some(p => canPickPlayer(p, { picked, mode, remainingSlots }).canPick);
+    if (fresh.length && anyValid) {
+      setChoices(fresh);
+      return;
+    }
+    // Fall back to a different squad that contains a valid pick
+    const usedIds = new Set(picked.map(p => p.id));
+    const rescueSquad = shuffle(pool).find(s =>
+      s.players.some(pl => !usedIds.has(pl.id) && canPickPlayer(pl, { picked, mode, remainingSlots }).canPick)
+    );
+    if (rescueSquad) {
+      setSquad(rescueSquad);
+      setChoices(pickChoices(rescueSquad, picked, mode, remainingSlots, true));
+      setRecentSquadIds(r => [...r, rescueSquad.id].slice(-5));
+    }
+  };
+
+  const validCount = choices.filter(p => canPickPlayer(p, { picked, mode, remainingSlots }).canPick).length;
+  const softLocked = choices.length > 0 && validCount === 0;
+
+  // Auto-rescue: if we deal a fully locked round, reshuffle once so the user never soft-locks.
+  useEffect(() => {
+    if (softLocked) reshuffle();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [softLocked]);
+
+  const status = computeStatus(picked, mode);
+  const overseas = overseasCount(picked);
+  const rating = estimatedRating(picked);
+  const chem = activatedChemistry(picked);
 
   return (
     <div className="min-h-screen px-6 py-8">
@@ -61,7 +145,7 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
             <p className="mt-1 text-sm text-muted-foreground">
               Pick one player from{" "}
               <span className="font-medium text-foreground">
-                {difficulty === "Legend" ? "a mystery squad" : currentRound.squad.label}
+                {difficulty === "Legend" ? "a mystery squad" : squad.label}
               </span>
             </p>
           </div>
@@ -82,18 +166,53 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
           </div>
         </header>
 
+        {/* Re-roll toolbar */}
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          <button
+            onClick={rerollSameYear}
+            disabled={yearRerolls <= 0}
+            className="glass-card inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-medium disabled:opacity-40 hover:ring-1 hover:ring-[color:var(--gold)]/50"
+          >
+            <Calendar className="h-3.5 w-3.5 text-gold" />
+            Another Team · {squad.year}
+            <span className="rounded-full bg-[color:var(--gold)]/15 px-1.5 py-0.5 text-[10px] text-gold">{yearRerolls}</span>
+          </button>
+          <button
+            onClick={rerollSameTeam}
+            disabled={teamRerolls <= 0}
+            className="glass-card inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-medium disabled:opacity-40 hover:ring-1 hover:ring-[color:var(--gold)]/50"
+          >
+            <Users2 className="h-3.5 w-3.5 text-gold" />
+            Same Team · Different Year
+            <span className="rounded-full bg-[color:var(--gold)]/15 px-1.5 py-0.5 text-[10px] text-gold">{teamRerolls}</span>
+          </button>
+          <button
+            onClick={reshuffle}
+            className="glass-card inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-medium hover:ring-1 hover:ring-[color:var(--accent)]/50"
+          >
+            <Shuffle className="h-3.5 w-3.5 text-[color:var(--accent)]" />
+            Reshuffle Squad
+          </button>
+          {softLocked && (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--destructive)]/50 bg-[color:var(--destructive)]/10 px-3 py-1 text-[11px] text-[color:var(--destructive)]">
+              <AlertTriangle className="h-3 w-3" />
+              No valid picks — auto-reshuffling
+            </span>
+          )}
+        </div>
+
         <div className="mt-8 grid gap-6 lg:grid-cols-[1fr,320px]">
           <div>
             <AnimatePresence mode="wait">
               <motion.div
-                key={round}
+                key={`${round}-${squad.id}`}
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -16 }}
                 transition={{ duration: 0.35 }}
                 className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
               >
-                {currentRound.choices.map((pl) => {
+                {choices.map((pl) => {
                   const check = canPickPlayer(pl, { picked, mode, remainingSlots });
                   return (
                     <div key={pl.id} className="relative">
@@ -101,7 +220,7 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
                         <PlayerCard
                           player={pl}
                           difficulty={difficulty}
-                          squadLabel={difficulty === "Legend" ? undefined : currentRound.squad.label}
+                          squadLabel={difficulty === "Legend" ? undefined : squad.label}
                           onSelect={() => select(pl)}
                         />
                       </div>
