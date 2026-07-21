@@ -1,4 +1,4 @@
-import type { Player, Pitch, Weather, Innings, TestScorecard, StageKind } from "../types";
+import type { Player, Pitch, Weather, Innings, TestScorecard, StageKind, FullInnings } from "../types";
 import { attrs, battingOrder, bowlingPool } from "./attributes";
 import { clamp, pick, Rng, weightedPick } from "./rng";
 
@@ -459,6 +459,28 @@ export function simulateTestMatch(
     firstBat, secondBat, ourAll, oppAll, inn1, inn2, followOnEnforced, result, marginText, pom,
   }, rng);
 
+  const toFull = (s: InningsState, label: string): FullInnings => ({
+    teamName: s.teamName,
+    runs: s.runs,
+    wickets: s.wickets,
+    overs: Math.round(oversFromBalls(s.balls) * 10) / 10,
+    batters: s.batters.filter(b => b.balls > 0 || b.out).map(b => ({
+      name: b.p.name, runs: b.runs, balls: b.balls, fours: b.fours, sixes: b.sixes, out: b.out,
+      how: b.out ? "out" : (b.balls > 0 ? "not out" : undefined),
+    })),
+    bowlers: Array.from(s.bowlers.values()).filter(b => b.balls > 0).map(b => ({
+      name: b.p.name,
+      overs: Math.round(oversFromBalls(b.balls) * 10) / 10,
+      runs: b.runs, wickets: b.wickets, maidens: b.maidens,
+      econ: b.balls > 0 ? Math.round((b.runs * 6 / b.balls) * 100) / 100 : 0,
+    })),
+    fall: [],
+    label,
+  });
+  const full: FullInnings[] = [];
+  ourAll.forEach((s, i) => full.push(toFull(s, `${ourName} ${i === 0 ? "1st" : "2nd"} Innings${s.followedOn ? " (f/o)" : ""}`)));
+  oppAll.forEach((s, i) => full.push(toFull(s, `${opp.name} ${i === 0 ? "1st" : "2nd"} Innings${s.followedOn ? " (f/o)" : ""}`)));
+
   return {
     format: "TEST",
     stage,
@@ -477,6 +499,7 @@ export function simulateTestMatch(
     highlights,
     sessionsNote: highlights.join("  "),
     eliminated: false,
+    full,
   };
 }
 
