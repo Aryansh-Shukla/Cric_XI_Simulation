@@ -104,6 +104,25 @@ export interface Innings {
 
 export type MatchFormat = "T20" | "ODI" | "TEST";
 
+/* ---------- Full detailed innings (for scorecard modal + stats) ---------- */
+export interface BatterLine {
+  name: string; runs: number; balls: number; fours: number; sixes: number; out: boolean; how?: string;
+}
+export interface BowlerLine {
+  name: string; overs: number; runs: number; wickets: number; maidens: number; econ: number;
+}
+export interface FallLine { runs: number; wicket: number; batter: string; over: number; }
+export interface FullInnings {
+  teamName: string;
+  runs: number;
+  wickets: number;
+  overs: number;
+  batters: BatterLine[];
+  bowlers: BowlerLine[];
+  fall: FallLine[];
+  label?: string; // e.g. "1st Innings", "2nd Innings"
+}
+
 export interface LimitedScorecard {
   format: "T20" | "ODI";
   stage: StageKind;
@@ -121,6 +140,7 @@ export interface LimitedScorecard {
   playerOfMatch: string;
   highlights: string[];
   eliminated: boolean;     // true if this loss ends the run
+  full?: FullInnings[];    // detailed batter/bowler lines (both teams, both innings)
 }
 
 export interface TestScorecard {
@@ -141,6 +161,7 @@ export interface TestScorecard {
   highlights: string[];
   sessionsNote: string;
   eliminated: boolean;     // series-level early termination unused for tests
+  full?: FullInnings[];
 }
 
 export type MatchResult = LimitedScorecard | TestScorecard;
