@@ -165,3 +165,18 @@ export interface TestScorecard {
 }
 
 export type MatchResult = LimitedScorecard | TestScorecard;
+
+/* ---------- Tournament-wide aggregated stats ---------- */
+export interface PlayerAgg {
+  name: string;
+  team: string;
+  matches: number;
+  runs: number;
+  balls: number;
+  fours: number;
+  sixes: number;
+  wickets: number;
+  ballsBowled: number;
+  runsConceded: number;
+  isOurs: boolean;
+}
