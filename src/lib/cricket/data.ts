@@ -13,7 +13,7 @@ const p = (
   name,
   country,
   role,
-  traits,
+  traits: Array.isArray(traits) ? traits : [],
   isOverseas: extras.isOverseas,
   isCaptain: extras.isCaptain,
   stats: {
@@ -148,7 +148,7 @@ const westindies2016: Squad = makeSquad("West Indies 2016", "West Indies", 2016,
 ]);
 
 const australia2021T20: Squad = makeSquad("Australia 2021", "Australia", 2021, "T20_WC", [
-  p("Aaron Finch", "Australia", "Batsman", { batting: 84, leadership: 86 }, { isCaptain: true } as any),
+  p("Aaron Finch", "Australia", "Batsman", { batting: 84, leadership: 86 }, ["Captain Fantastic"], { isCaptain: true }),
   p("David Warner", "Australia", "Batsman", { batting: 92 }, ["Powerplay Destroyer"]),
   p("Mitchell Marsh", "Australia", "AllRounder", { batting: 82, bowling: 70, pressure: 88 }, ["Big Match Player"]),
   p("Glenn Maxwell", "Australia", "AllRounder", { batting: 86, bowling: 74 }, ["Finisher"]),
