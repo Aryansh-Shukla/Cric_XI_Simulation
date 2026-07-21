@@ -1,4 +1,4 @@
-import type { Player, Pitch, Weather, Innings, LimitedScorecard, StageKind, GameMode } from "../types";
+import type { Player, Pitch, Weather, Innings, LimitedScorecard, StageKind, GameMode, FullInnings } from "../types";
 import { KNOCKOUT_STAGES } from "../types";
 import { attrs, battingOrder, bowlingPool, wicketkeeper } from "./attributes";
 import { clamp, pick, Rng, weightedPick } from "./rng";
@@ -367,6 +367,48 @@ export function summariseInnings(s: InningsState): Innings {
   };
 }
 
+/** Convert internal InningsState into a serializable FullInnings for UI/stats. */
+export function toFullInnings(s: InningsState, label?: string): FullInnings {
+  const overs = Math.round(oversFromBalls(s.balls) * 10) / 10;
+  const batters = s.batters
+    .filter(b => b.balls > 0 || b.out)
+    .map(b => ({
+      name: b.p.name,
+      runs: b.runs,
+      balls: b.balls,
+      fours: b.fours,
+      sixes: b.sixes,
+      out: b.out,
+      how: b.dismissal
+        ? `${b.dismissal.how}${b.dismissal.bowler ? " b " + b.dismissal.bowler.name : ""}`
+        : (b.balls > 0 ? "not out" : undefined),
+    }));
+  const bowlers = Array.from(s.bowlers.values())
+    .filter(b => b.balls > 0)
+    .map(b => {
+      const ov = Math.round(oversFromBalls(b.balls) * 10) / 10;
+      const econ = b.balls > 0 ? Math.round((b.runs * 6 / b.balls) * 100) / 100 : 0;
+      return {
+        name: b.p.name,
+        overs: ov,
+        runs: b.runs,
+        wickets: b.wickets,
+        maidens: b.maidens,
+        econ,
+      };
+    });
+  return {
+    teamName: s.teamName,
+    runs: s.runs,
+    wickets: s.wickets,
+    overs,
+    batters,
+    bowlers,
+    fall: s.fallOfWickets.map(f => ({ ...f })),
+    label,
+  };
+}
+
 /* ---------- Toss ---------- */
 
 export function decideToss(pitch: Pitch, weather: Weather, format: Format, rng: Rng): {
@@ -616,6 +658,10 @@ export function simulateLimitedMatch(
   const firstState = weBattedFirst ? ourState : oppState;
   const secondState = weBattedFirst ? oppState : ourState;
   scorecard.highlights = limitedCommentaryFromEvents(scorecard, firstState, secondState, rng);
+  scorecard.full = [
+    toFullInnings(firstState, "1st Innings"),
+    toFullInnings(secondState, "2nd Innings"),
+  ];
 
   // Sanity checks
   validateLimited(scorecard);

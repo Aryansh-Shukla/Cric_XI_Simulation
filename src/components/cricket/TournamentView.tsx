@@ -1,11 +1,18 @@
-import { useEffect, useState } from "react";
+import { Component, useMemo, useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, CloudRain, Sun, Cloud, Moon, ArrowRight, RotateCcw, MapPin, Coins } from "lucide-react";
+import {
+  Trophy, CloudRain, Sun, Cloud, Moon, ArrowRight, RotateCcw, MapPin, Coins,
+  Play, FileText, BarChart3, ListOrdered, AlertTriangle,
+} from "lucide-react";
 import type {
-  GameMode, Player, Weather, MatchResult, LimitedScorecard, TestScorecard, Innings,
+  GameMode, Player, Weather, MatchResult, LimitedScorecard, TestScorecard, Innings, PlayerAgg,
 } from "@/lib/cricket/types";
-import { simulateTournament, type Tournament } from "@/lib/cricket/simulation";
+import {
+  createTournament, advanceTournament, topRunScorers, topWicketTakers,
+  type TournamentState,
+} from "@/lib/cricket/tournament";
 import { MODE_LABELS } from "@/lib/cricket/data";
+import { ScorecardModal } from "./ScorecardModal";
 
 interface Props {
   players: Player[];
@@ -27,124 +34,369 @@ const isLimited = (r: MatchResult): r is LimitedScorecard =>
   r.format === "T20" || r.format === "ODI";
 const isTest = (r: MatchResult): r is TestScorecard => r.format === "TEST";
 
-function formatOvers(o: number) {
-  return o.toFixed(1);
+function formatOvers(o: number) { return o.toFixed(1); }
+
+/* ---------- Error boundary ---------- */
+class TournamentBoundary extends Component<{ children: ReactNode; onRestart: () => void }, { err: Error | null }> {
+  state = { err: null as Error | null };
+  static getDerivedStateFromError(err: Error) { return { err }; }
+  componentDidCatch(err: Error) { console.error("[tournament]", err); }
+  render() {
+    if (this.state.err) {
+      return (
+        <div className="mx-auto max-w-2xl px-6 py-16 text-center">
+          <AlertTriangle className="mx-auto h-10 w-10 text-[color:var(--destructive)]" />
+          <h3 className="mt-4 text-2xl font-bold">Tournament crashed</h3>
+          <p className="mt-2 text-sm text-muted-foreground">{this.state.err.message}</p>
+          <button onClick={this.props.onRestart} className="btn-gold mt-6 inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold">
+            Start Over <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
-export function TournamentView({ players, mode, leadership, onRestart }: Props) {
-  const [t] = useState<Tournament>(() =>
-    simulateTournament(players, mode, undefined, leadership?.captainId),
+/* ---------- Main ---------- */
+export function TournamentView(props: Props) {
+  return (
+    <TournamentBoundary onRestart={props.onRestart}>
+      <TournamentInner {...props} />
+    </TournamentBoundary>
   );
-  const [revealed, setRevealed] = useState(0);
+}
 
-  useEffect(() => {
-    if (revealed >= t.results.length) return;
-    const timer = setTimeout(() => setRevealed(r => r + 1), 1500);
-    return () => clearTimeout(timer);
-  }, [revealed, t.results.length]);
+type Tab = "matches" | "leaders" | "standings";
 
-  const done = revealed >= t.results.length;
-  const won = done && t.championshipWon;
-  const nextStageLabel = t.stages[revealed] ?? t.finalStageReached;
+function TournamentInner({ players, mode, leadership, onRestart }: Props) {
+  const [state, setState] = useState<TournamentState>(() =>
+    createTournament(players, mode, undefined, leadership?.captainId),
+  );
+  const [busy, setBusy] = useState(false);
+  const [tab, setTab] = useState<Tab>("matches");
+  const [scorecard, setScorecard] = useState<MatchResult | null>(null);
+
+  const nextFixture = state.fixtures[state.currentIndex];
+  const done = state.complete;
+  const won = state.championshipWon;
+
+  const runScorers = useMemo(() => topRunScorers(state), [state]);
+  const wicketTakers = useMemo(() => topWicketTakers(state), [state]);
+
+  const play = () => {
+    if (busy || done) return;
+    setBusy(true);
+    // Yield to allow spinner paint before heavy sim
+    setTimeout(() => {
+      setState(prev => advanceTournament(prev));
+      setBusy(false);
+    }, 60);
+  };
 
   return (
     <div className="relative min-h-screen px-6 py-10">
       {won && <Confetti />}
       <div className="mx-auto max-w-5xl">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <div className="text-xs uppercase tracking-widest text-gold">
-              {MODE_LABELS[mode].title} · Live Tournament
-            </div>
-            <h2 className="mt-1 text-3xl font-bold md:text-4xl">Tournament</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Captain: <span className="text-foreground">{t.captain.name}</span>
-              <span className="mx-2 opacity-40">·</span>
-              Team Rating <span className="text-gold">{t.teamRatingSnapshot}</span>
-            </p>
-          </div>
-          <button onClick={onRestart} className="btn-ghost-gold inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm">
-            <RotateCcw className="h-4 w-4" /> New Draft
-          </button>
+        <Header state={state} mode={mode} onRestart={onRestart} />
+        <StageTimeline state={state} />
+
+        <div className="mt-6 flex flex-wrap gap-2">
+          <TabButton active={tab === "matches"} onClick={() => setTab("matches")} icon={<Play className="h-3.5 w-3.5" />}>Matches</TabButton>
+          <TabButton active={tab === "leaders"} onClick={() => setTab("leaders")} icon={<BarChart3 className="h-3.5 w-3.5" />}>Leaders</TabButton>
+          <TabButton active={tab === "standings"} onClick={() => setTab("standings")} icon={<ListOrdered className="h-3.5 w-3.5" />}>Standings</TabButton>
         </div>
 
-        <StageTimeline stages={t.stages} results={t.results} revealed={revealed} />
+        <div className="mt-4 space-y-4">
+          {tab === "matches" && (
+            <>
+              <AnimatePresence>
+                {state.results.map((r, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 20, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.4 }}
+                  >
+                    {isLimited(r)
+                      ? <LimitedCard r={r} onView={() => setScorecard(r)} />
+                      : <TestCard r={r as TestScorecard} onView={() => setScorecard(r)} />}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
 
-        <div className="mt-6 space-y-4">
-          <AnimatePresence>
-            {t.results.slice(0, revealed).map((r, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 20, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ duration: 0.5 }}
-              >
-                {isLimited(r) ? <LimitedCard r={r} /> : <TestCard r={r as TestScorecard} />}
-              </motion.div>
-            ))}
-          </AnimatePresence>
-
-          {!done && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card rounded-2xl p-6 text-center text-sm text-muted-foreground">
-              <div className="mx-auto mb-2 h-2 w-24 overflow-hidden rounded-full bg-white/10">
-                <motion.div initial={{ x: "-100%" }} animate={{ x: "100%" }} transition={{ duration: 1.2, repeat: Infinity }}
-                  className="h-full w-1/2 bg-gradient-to-r from-transparent via-[color:var(--gold)] to-transparent" />
-              </div>
-              Simulating {nextStageLabel}…
-            </motion.div>
-          )}
-
-          {done && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ type: "spring", stiffness: 200, damping: 18 }}
-              className={`glass-card rounded-3xl p-8 text-center ${won ? "glow-gold ring-2 ring-[color:var(--gold)]" : ""}`}
-            >
-              <Trophy className={`mx-auto h-14 w-14 ${won ? "text-gold" : "text-muted-foreground"}`} />
-              <h3 className="mt-4 text-3xl font-black">
-                {won
-                  ? "Champions!"
-                  : t.eliminated
-                    ? `Knocked out at the ${t.eliminatedAt}`
-                    : mode === "TEST"
-                      ? "Series Complete"
-                      : "Campaign Over"}
-              </h3>
-              <p className="mt-2 text-muted-foreground">
-                {won
-                  ? "Your XI has lifted the trophy. Legendary."
-                  : mode === "TEST"
-                    ? t.seriesResult
-                    : `Record: ${t.wins}W – ${t.losses}L. Rebuild your XI and take another shot.`}
-              </p>
-              <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-[color:var(--gold)]/40 bg-[color:var(--gold)]/10 px-4 py-1.5 text-sm text-gold">
-                <Coins className="h-3.5 w-3.5" /> Score {t.finalScore}
-              </div>
-              {t.playerOfSeries && (
-                <div className="mt-3 text-sm text-muted-foreground">
-                  Player of the Series: <span className="text-foreground">{t.playerOfSeries}</span>
-                </div>
+              {!done && nextFixture && (
+                <NextMatchCard
+                  state={state}
+                  onPlay={play}
+                  busy={busy}
+                />
               )}
-              <div className="mt-6 flex justify-center gap-2">
-                <button onClick={onRestart} className="btn-gold inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold">
-                  Play Again <ArrowRight className="h-4 w-4" />
-                </button>
-              </div>
-            </motion.div>
+
+              {done && <FinaleCard state={state} mode={mode} onRestart={onRestart} />}
+            </>
           )}
+
+          {tab === "leaders" && <LeadersPanel runScorers={runScorers} wicketTakers={wicketTakers} />}
+          {tab === "standings" && <StandingsPanel state={state} />}
         </div>
       </div>
+
+      <ScorecardModal result={scorecard} onClose={() => setScorecard(null)} />
     </div>
   );
 }
 
-function StageTimeline({ stages, results, revealed }: { stages: MatchResult["stage"][]; results: MatchResult[]; revealed: number }) {
+/* ---------- Header ---------- */
+function Header({ state, mode, onRestart }: { state: TournamentState; mode: GameMode; onRestart: () => void }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <div className="text-xs uppercase tracking-widest text-gold">
+          {MODE_LABELS[mode].title} · Live Tournament
+        </div>
+        <h2 className="mt-1 text-3xl font-bold md:text-4xl">Tournament</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Captain: <span className="text-foreground">{state.captain.name}</span>
+          <span className="mx-2 opacity-40">·</span>
+          Team Rating <span className="text-gold">{state.teamRatingSnapshot}</span>
+          <span className="mx-2 opacity-40">·</span>
+          Record <span className="text-foreground">{state.wins}W – {state.losses}L{state.draws ? ` – ${state.draws}D` : ""}</span>
+        </p>
+      </div>
+      <button onClick={onRestart} className="btn-ghost-gold inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm">
+        <RotateCcw className="h-4 w-4" /> New Draft
+      </button>
+    </div>
+  );
+}
+
+/* ---------- Tabs ---------- */
+function TabButton({ active, onClick, icon, children }: { active: boolean; onClick: () => void; icon: ReactNode; children: ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider transition ${
+        active
+          ? "border-[color:var(--gold)]/60 bg-[color:var(--gold)]/10 text-gold"
+          : "border-[color:var(--border)] bg-[color:var(--muted)]/30 text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      {icon} {children}
+    </button>
+  );
+}
+
+/* ---------- Next Match ---------- */
+function NextMatchCard({ state, onPlay, busy }: { state: TournamentState; onPlay: () => void; busy: boolean }) {
+  const fx = state.fixtures[state.currentIndex];
+  if (!fx) return null;
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="glass-card rounded-2xl border border-[color:var(--gold)]/30 p-6"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <div className="text-xs uppercase tracking-widest text-gold">Up Next · {fx.stage}</div>
+          <h3 className="mt-1 text-2xl font-bold">{state.ourName} <span className="text-muted-foreground">vs</span> {fx.opponent.name}</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Opponent rating <span className="text-foreground">{fx.opponent.rating}</span>
+            <span className="mx-2 opacity-40">·</span>
+            Match {state.currentIndex + 1} of {state.fixtures.length}
+          </p>
+        </div>
+        <button
+          onClick={onPlay}
+          disabled={busy}
+          className="btn-gold inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold disabled:opacity-60"
+        >
+          {busy ? (
+            <>
+              <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              Simulating…
+            </>
+          ) : (
+            <>Simulate Match <ArrowRight className="h-4 w-4" /></>
+          )}
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ---------- Finale ---------- */
+function FinaleCard({ state, mode, onRestart }: { state: TournamentState; mode: GameMode; onRestart: () => void }) {
+  const won = state.championshipWon;
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ type: "spring", stiffness: 200, damping: 18 }}
+      className={`glass-card rounded-3xl p-8 text-center ${won ? "glow-gold ring-2 ring-[color:var(--gold)]" : ""}`}
+    >
+      <Trophy className={`mx-auto h-14 w-14 ${won ? "text-gold" : "text-muted-foreground"}`} />
+      <h3 className="mt-4 text-3xl font-black">
+        {won
+          ? "Champions!"
+          : state.eliminated
+            ? `Knocked out at the ${state.eliminatedAt}`
+            : mode === "TEST" ? "Series Complete" : "Campaign Over"}
+      </h3>
+      <p className="mt-2 text-muted-foreground">
+        {won
+          ? "Your XI has lifted the trophy. Legendary."
+          : mode === "TEST"
+            ? state.seriesResult
+            : `Record: ${state.wins}W – ${state.losses}L. Rebuild your XI and take another shot.`}
+      </p>
+      <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-[color:var(--gold)]/40 bg-[color:var(--gold)]/10 px-4 py-1.5 text-sm text-gold">
+        <Coins className="h-3.5 w-3.5" /> Score {state.finalScore}
+      </div>
+      {state.playerOfSeries && (
+        <div className="mt-3 text-sm text-muted-foreground">
+          Player of the Series: <span className="text-foreground">{state.playerOfSeries}</span>
+        </div>
+      )}
+      <div className="mt-6 flex justify-center gap-2">
+        <button onClick={onRestart} className="btn-gold inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold">
+          Play Again <ArrowRight className="h-4 w-4" />
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ---------- Leaders / Standings ---------- */
+function LeadersPanel({ runScorers, wicketTakers }: { runScorers: PlayerAgg[]; wicketTakers: PlayerAgg[] }) {
+  return (
+    <div className="grid gap-4 md:grid-cols-2">
+      <LeaderTable title="Most Runs" rows={runScorers} kind="bat" />
+      <LeaderTable title="Most Wickets" rows={wicketTakers} kind="bowl" />
+    </div>
+  );
+}
+
+function LeaderTable({ title, rows, kind }: { title: string; rows: PlayerAgg[]; kind: "bat" | "bowl" }) {
+  return (
+    <div className="glass-card overflow-hidden rounded-2xl">
+      <div className="border-b border-[color:var(--border)] px-4 py-3">
+        <div className="text-xs uppercase tracking-widest text-gold">{title}</div>
+      </div>
+      {rows.length === 0 ? (
+        <div className="p-6 text-center text-xs text-muted-foreground">No data yet — play a match.</div>
+      ) : (
+        <table className="w-full text-xs">
+          <thead className="bg-white/5 text-[10px] uppercase tracking-wider text-muted-foreground">
+            <tr>
+              <th className="px-3 py-2 text-left">Player</th>
+              <th className="px-3 py-2 text-left">Team</th>
+              <th className="px-3 py-2 text-right">M</th>
+              {kind === "bat" ? (
+                <>
+                  <th className="px-3 py-2 text-right">R</th>
+                  <th className="px-3 py-2 text-right">SR</th>
+                </>
+              ) : (
+                <>
+                  <th className="px-3 py-2 text-right">W</th>
+                  <th className="px-3 py-2 text-right">Econ</th>
+                </>
+              )}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((p, i) => {
+              const sr = p.balls ? Math.round((p.runs * 100) / p.balls) : 0;
+              const econ = p.ballsBowled ? Math.round((p.runsConceded * 6 / p.ballsBowled) * 100) / 100 : 0;
+              return (
+                <tr key={i} className="border-t border-[color:var(--border)]/40">
+                  <td className="px-3 py-1.5">
+                    <span className={p.isOurs ? "text-gold" : ""}>{p.name}</span>
+                  </td>
+                  <td className="px-3 py-1.5 text-muted-foreground">{p.team}</td>
+                  <td className="px-3 py-1.5 text-right">{p.matches}</td>
+                  {kind === "bat" ? (
+                    <>
+                      <td className="px-3 py-1.5 text-right font-semibold">{p.runs}</td>
+                      <td className="px-3 py-1.5 text-right">{sr}</td>
+                    </>
+                  ) : (
+                    <>
+                      <td className="px-3 py-1.5 text-right font-semibold">{p.wickets}</td>
+                      <td className="px-3 py-1.5 text-right">{econ.toFixed(2)}</td>
+                    </>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
+function StandingsPanel({ state }: { state: TournamentState }) {
+  // Simple standings from user results only
+  const rows: { name: string; p: number; w: number; l: number; pts: number }[] = [
+    { name: state.ourName, p: state.results.length, w: state.wins, l: state.losses, pts: state.wins * 2 + state.draws },
+  ];
+  const oppSeen = new Map<string, { w: number; l: number; p: number }>();
+  for (const r of state.results) {
+    if (!("weWon" in r)) continue;
+    const name = r.oppName;
+    const cur = oppSeen.get(name) ?? { w: 0, l: 0, p: 0 };
+    cur.p++;
+    if (r.weWon) cur.l++; else cur.w++;
+    oppSeen.set(name, cur);
+  }
+  for (const [name, v] of oppSeen) rows.push({ name, p: v.p, w: v.w, l: v.l, pts: v.w * 2 });
+  rows.sort((a, b) => b.pts - a.pts || b.w - a.w);
+
+  return (
+    <div className="glass-card overflow-hidden rounded-2xl">
+      <div className="border-b border-[color:var(--border)] px-4 py-3">
+        <div className="text-xs uppercase tracking-widest text-gold">Standings</div>
+      </div>
+      {rows.every(r => r.p === 0) ? (
+        <div className="p-6 text-center text-xs text-muted-foreground">Play a match to populate the table.</div>
+      ) : (
+        <table className="w-full text-xs">
+          <thead className="bg-white/5 text-[10px] uppercase tracking-wider text-muted-foreground">
+            <tr>
+              <th className="px-3 py-2 text-left">Team</th>
+              <th className="px-3 py-2 text-right">P</th>
+              <th className="px-3 py-2 text-right">W</th>
+              <th className="px-3 py-2 text-right">L</th>
+              <th className="px-3 py-2 text-right">Pts</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={i} className="border-t border-[color:var(--border)]/40">
+                <td className={`px-3 py-1.5 ${r.name === state.ourName ? "text-gold" : ""}`}>{r.name}</td>
+                <td className="px-3 py-1.5 text-right">{r.p}</td>
+                <td className="px-3 py-1.5 text-right">{r.w}</td>
+                <td className="px-3 py-1.5 text-right">{r.l}</td>
+                <td className="px-3 py-1.5 text-right font-semibold">{r.pts}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Match cards ---------- */
+function StageTimeline({ state }: { state: TournamentState }) {
   return (
     <div className="mt-6 flex flex-wrap gap-1.5">
-      {stages.map((s, i) => {
-        const r = results[i];
-        const played = i < revealed && r;
+      {state.stages.map((s, i) => {
+        const r = state.results[i];
+        const played = i < state.results.length && r;
         const outcome = played
           ? isTest(r!) ? r!.result : (r as LimitedScorecard).weWon ? "WON" : "LOST"
           : null;
@@ -152,8 +404,9 @@ function StageTimeline({ stages, results, revealed }: { stages: MatchResult["sta
           outcome === "WON" ? "border-[color:var(--accent)]/50 bg-[color:var(--accent)]/10 text-[color:var(--accent)]"
           : outcome === "LOST" ? "border-[color:var(--destructive)]/50 bg-[color:var(--destructive)]/10 text-[color:var(--destructive)]"
           : outcome === "DRAW" ? "border-white/20 bg-white/5"
-          : i === revealed ? "border-[color:var(--gold)]/60 bg-[color:var(--gold)]/10 text-gold animate-pulse"
-          : "border-[color:var(--border)] bg-[color:var(--muted)]/40 text-muted-foreground";
+          : i === state.currentIndex && !state.complete
+            ? "border-[color:var(--gold)]/60 bg-[color:var(--gold)]/10 text-gold animate-pulse"
+            : "border-[color:var(--border)] bg-[color:var(--muted)]/40 text-muted-foreground";
         return (
           <span key={i} className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${color}`}>
             {s}
@@ -164,11 +417,9 @@ function StageTimeline({ stages, results, revealed }: { stages: MatchResult["sta
   );
 }
 
-function LimitedCard({ r }: { r: LimitedScorecard }) {
+function LimitedCard({ r, onView }: { r: LimitedScorecard; onView: () => void }) {
   const WIcon = weatherIcon(r.weather);
-  const ringClass = r.weWon
-    ? "ring-1 ring-[color:var(--accent)]/40"
-    : "ring-1 ring-[color:var(--destructive)]/40";
+  const ringClass = r.weWon ? "ring-1 ring-[color:var(--accent)]/40" : "ring-1 ring-[color:var(--destructive)]/40";
   const tossText = `${r.toss.winner === "us" ? r.ourName : r.oppName} won toss · chose to ${r.toss.decision}`;
 
   return (
@@ -211,6 +462,12 @@ function LimitedCard({ r }: { r: LimitedScorecard }) {
       <ul className="space-y-1 border-t border-[color:var(--border)] px-5 py-3 text-sm text-muted-foreground">
         {r.highlights.map((h, k) => <li key={k}>• {h}</li>)}
       </ul>
+
+      <div className="flex justify-end border-t border-[color:var(--border)] px-5 py-3">
+        <button onClick={onView} className="btn-ghost-gold inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs">
+          <FileText className="h-3.5 w-3.5" /> View Scorecard
+        </button>
+      </div>
     </div>
   );
 }
@@ -234,7 +491,7 @@ function InningsBlock({ title, innings, highlight, align = "left" }: { title: st
   );
 }
 
-function TestCard({ r }: { r: TestScorecard }) {
+function TestCard({ r, onView }: { r: TestScorecard; onView: () => void }) {
   const WIcon = weatherIcon(r.weather);
   const ringClass =
     r.result === "WON" ? "ring-1 ring-[color:var(--accent)]/40"
@@ -279,6 +536,12 @@ function TestCard({ r }: { r: TestScorecard }) {
       <ul className="space-y-1 border-t border-[color:var(--border)] px-5 py-3 text-sm text-muted-foreground">
         {r.highlights.map((h, k) => <li key={k}>• {h}</li>)}
       </ul>
+
+      <div className="flex justify-end border-t border-[color:var(--border)] px-5 py-3">
+        <button onClick={onView} className="btn-ghost-gold inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs">
+          <FileText className="h-3.5 w-3.5" /> View Scorecard
+        </button>
+      </div>
     </div>
   );
 }

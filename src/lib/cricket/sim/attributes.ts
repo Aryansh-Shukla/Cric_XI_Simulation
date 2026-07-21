@@ -35,7 +35,7 @@ export function attrs(p: Player): PlayerAttrs {
   const isSpin = p.role === "SpinBowler";
   const isBowler = isPace || isSpin;
   const isAr = p.role === "AllRounder";
-  const traits = p.traits ?? [];
+  const traits: Trait[] = Array.isArray(p.traits) ? p.traits : [];
   const hasTrait = (t: Trait) => traits.includes(t);
 
   const bat = s.batting;
