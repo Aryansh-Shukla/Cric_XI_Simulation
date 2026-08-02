@@ -45,10 +45,10 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
   const round = picked.length + 1;
   const remainingSlots = 11 - picked.length;
 
-  const pool = useMemo(() => SQUADS_BY_MODE[mode], [mode]);
+  const pool = useMemo(() => DraftPoolService.getPool(mode), [mode]);
 
   const [squad, setSquad] = useState<Squad>(() => shuffle(pool)[0]);
-  const [choices, setChoices] = useState<Player[]>(() => pickChoices(pool[0], [], mode, 11));
+  const [choices, setChoices] = useState<Player[]>(() => pickChoices(shuffle(pool)[0], [], mode, 11));
   const [recentSquadIds, setRecentSquadIds] = useState<string[]>([]);
   const [yearRerolls, setYearRerolls] = useState(REROLL_LIMIT);
   const [teamRerolls, setTeamRerolls] = useState(REROLL_LIMIT);
@@ -76,31 +76,44 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
     }
   };
 
-  const rerollSameYear = () => {
-    if (yearRerolls <= 0) return;
-    const avoid = new Set([...recentSquadIds, squad.id]);
-    let candidates = pool.filter(s => s.year === squad.year && !avoid.has(s.id));
-    if (!candidates.length) candidates = pool.filter(s => s.year === squad.year && s.id !== squad.id);
-    if (!candidates.length) return;
-    const next = shuffle(candidates)[0];
+  // Reroll options come straight from the historical repositories.
+  const sameYearOptions = useMemo(
+    () => RerollService.sameYearDifferentTeam(squad, mode, recentSquadIds),
+    [squad, mode, recentSquadIds],
+  );
+  const sameTeamOptions = useMemo(
+    () => RerollService.sameTeamDifferentYear(squad, mode, recentSquadIds),
+    [squad, mode, recentSquadIds],
+  );
+
+  const applyReroll = (candidates: Squad[]) => {
+    const fallback = candidates.length ? candidates : [];
+    if (!fallback.length) return false;
+    const next = shuffle(fallback)[0];
     setSquad(next);
     setChoices(pickChoices(next, picked, mode, remainingSlots));
     setRecentSquadIds(r => [...r, next.id].slice(-5));
-    setYearRerolls(n => n - 1);
+    return true;
+  };
+
+  const rerollSameYear = () => {
+    if (yearRerolls <= 0) return;
+    const alt = sameYearOptions.length
+      ? sameYearOptions
+      : RerollService.sameYearDifferentTeam(squad, mode);
+    if (applyReroll(alt)) setYearRerolls(n => n - 1);
   };
 
   const rerollSameTeam = () => {
     if (teamRerolls <= 0) return;
-    const avoid = new Set([...recentSquadIds, squad.id]);
-    let candidates = pool.filter(s => s.country === squad.country && !avoid.has(s.id));
-    if (!candidates.length) candidates = pool.filter(s => s.country === squad.country && s.id !== squad.id);
-    if (!candidates.length) return;
-    const next = shuffle(candidates)[0];
-    setSquad(next);
-    setChoices(pickChoices(next, picked, mode, remainingSlots));
-    setRecentSquadIds(r => [...r, next.id].slice(-5));
-    setTeamRerolls(n => n - 1);
+    const alt = sameTeamOptions.length
+      ? sameTeamOptions
+      : RerollService.sameTeamDifferentYear(squad, mode);
+    if (applyReroll(alt)) setTeamRerolls(n => n - 1);
   };
+
+  const sameYearAvailable = sameYearOptions.length > 0 || RerollService.sameYearDifferentTeam(squad, mode).length > 0;
+  const sameTeamAvailable = sameTeamOptions.length > 0 || RerollService.sameTeamDifferentYear(squad, mode).length > 0;
 
   const reshuffle = () => {
     // Try same squad first, prioritizing valid picks
@@ -111,9 +124,9 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
       return;
     }
     // Fall back to a different squad that contains a valid pick
-    const usedIds = new Set(picked.map(p => p.id));
     const rescueSquad = shuffle(pool).find(s =>
-      s.players.some(pl => !usedIds.has(pl.id) && canPickPlayer(pl, { picked, mode, remainingSlots }).canPick)
+      PlayerEligibilityService.filterEligible(s.players, picked)
+        .some(pl => canPickPlayer(pl, { picked, mode, remainingSlots }).canPick)
     );
     if (rescueSquad) {
       setSquad(rescueSquad);
