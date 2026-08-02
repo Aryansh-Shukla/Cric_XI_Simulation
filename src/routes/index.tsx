@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Landing } from "@/components/cricket/Landing";
 import { ModeSelect } from "@/components/cricket/ModeSelect";
 import { Draft } from "@/components/cricket/Draft";
@@ -26,6 +26,12 @@ function Index() {
   const [difficulty, setDifficulty] = useState<Difficulty>("Medium");
   const [players, setPlayers] = useState<Player[]>([]);
   const [leadership, setLeadership] = useState<LeadershipChoice | null>(null);
+
+  // Dev-only catalogue integrity report.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    void import("@/lib/cricket/validation").then(m => m.logValidationReport());
+  }, []);
 
   const reset = () => {
     setPlayers([]);

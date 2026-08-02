@@ -2,10 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, Circle, Lock, Sparkles, Users, Globe2, TrendingUp, Shuffle, Calendar, Users2, AlertTriangle } from "lucide-react";
 import { PlayerCard } from "./PlayerCard";
-import { SQUADS_BY_MODE, MODE_LABELS } from "@/lib/cricket/data";
+import { MODE_LABELS } from "@/lib/cricket/data";
 import type { Difficulty, GameMode, Player, Squad } from "@/lib/cricket/types";
 import { computeStatus, canPickPlayer, overseasCount, estimatedRating } from "@/lib/cricket/requirements";
 import { activatedChemistry } from "@/lib/cricket/simulation";
+import { DraftPoolService } from "@/services/DraftPoolService";
+import { PlayerEligibilityService } from "@/services/PlayerEligibilityService";
+import { RerollService, NO_ALTERNATIVE_MESSAGE } from "@/services/RerollService";
 
 interface Props {
   mode: GameMode;
@@ -25,8 +28,8 @@ function shuffle<T>(arr: T[]): T[] {
 const REROLL_LIMIT = 4;
 
 function pickChoices(squad: Squad, picked: Player[], mode: GameMode, remainingSlots: number, prioritizeValid = false): Player[] {
-  const usedIds = new Set(picked.map(p => p.id));
-  const pool = squad.players.filter(p => !usedIds.has(p.id));
+  // Canonical enforcement: every profile of an already-drafted cricketer is removed.
+  const pool = PlayerEligibilityService.filterEligible(squad.players, picked);
   if (!pool.length) return [];
   if (prioritizeValid) {
     const valid = pool.filter(p => canPickPlayer(p, { picked, mode, remainingSlots }).canPick);
@@ -42,10 +45,10 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
   const round = picked.length + 1;
   const remainingSlots = 11 - picked.length;
 
-  const pool = useMemo(() => SQUADS_BY_MODE[mode], [mode]);
+  const pool = useMemo(() => DraftPoolService.getPool(mode), [mode]);
 
   const [squad, setSquad] = useState<Squad>(() => shuffle(pool)[0]);
-  const [choices, setChoices] = useState<Player[]>(() => pickChoices(pool[0], [], mode, 11));
+  const [choices, setChoices] = useState<Player[]>(() => pickChoices(shuffle(pool)[0], [], mode, 11));
   const [recentSquadIds, setRecentSquadIds] = useState<string[]>([]);
   const [yearRerolls, setYearRerolls] = useState(REROLL_LIMIT);
   const [teamRerolls, setTeamRerolls] = useState(REROLL_LIMIT);
@@ -73,31 +76,44 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
     }
   };
 
-  const rerollSameYear = () => {
-    if (yearRerolls <= 0) return;
-    const avoid = new Set([...recentSquadIds, squad.id]);
-    let candidates = pool.filter(s => s.year === squad.year && !avoid.has(s.id));
-    if (!candidates.length) candidates = pool.filter(s => s.year === squad.year && s.id !== squad.id);
-    if (!candidates.length) return;
-    const next = shuffle(candidates)[0];
+  // Reroll options come straight from the historical repositories.
+  const sameYearOptions = useMemo(
+    () => RerollService.sameYearDifferentTeam(squad, mode, recentSquadIds),
+    [squad, mode, recentSquadIds],
+  );
+  const sameTeamOptions = useMemo(
+    () => RerollService.sameTeamDifferentYear(squad, mode, recentSquadIds),
+    [squad, mode, recentSquadIds],
+  );
+
+  const applyReroll = (candidates: Squad[]) => {
+    const fallback = candidates.length ? candidates : [];
+    if (!fallback.length) return false;
+    const next = shuffle(fallback)[0];
     setSquad(next);
     setChoices(pickChoices(next, picked, mode, remainingSlots));
     setRecentSquadIds(r => [...r, next.id].slice(-5));
-    setYearRerolls(n => n - 1);
+    return true;
+  };
+
+  const rerollSameYear = () => {
+    if (yearRerolls <= 0) return;
+    const alt = sameYearOptions.length
+      ? sameYearOptions
+      : RerollService.sameYearDifferentTeam(squad, mode);
+    if (applyReroll(alt)) setYearRerolls(n => n - 1);
   };
 
   const rerollSameTeam = () => {
     if (teamRerolls <= 0) return;
-    const avoid = new Set([...recentSquadIds, squad.id]);
-    let candidates = pool.filter(s => s.country === squad.country && !avoid.has(s.id));
-    if (!candidates.length) candidates = pool.filter(s => s.country === squad.country && s.id !== squad.id);
-    if (!candidates.length) return;
-    const next = shuffle(candidates)[0];
-    setSquad(next);
-    setChoices(pickChoices(next, picked, mode, remainingSlots));
-    setRecentSquadIds(r => [...r, next.id].slice(-5));
-    setTeamRerolls(n => n - 1);
+    const alt = sameTeamOptions.length
+      ? sameTeamOptions
+      : RerollService.sameTeamDifferentYear(squad, mode);
+    if (applyReroll(alt)) setTeamRerolls(n => n - 1);
   };
+
+  const sameYearAvailable = sameYearOptions.length > 0 || RerollService.sameYearDifferentTeam(squad, mode).length > 0;
+  const sameTeamAvailable = sameTeamOptions.length > 0 || RerollService.sameTeamDifferentYear(squad, mode).length > 0;
 
   const reshuffle = () => {
     // Try same squad first, prioritizing valid picks
@@ -108,9 +124,9 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
       return;
     }
     // Fall back to a different squad that contains a valid pick
-    const usedIds = new Set(picked.map(p => p.id));
     const rescueSquad = shuffle(pool).find(s =>
-      s.players.some(pl => !usedIds.has(pl.id) && canPickPlayer(pl, { picked, mode, remainingSlots }).canPick)
+      PlayerEligibilityService.filterEligible(s.players, picked)
+        .some(pl => canPickPlayer(pl, { picked, mode, remainingSlots }).canPick)
     );
     if (rescueSquad) {
       setSquad(rescueSquad);
@@ -170,7 +186,8 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
         <div className="mt-5 flex flex-wrap items-center gap-2">
           <button
             onClick={rerollSameYear}
-            disabled={yearRerolls <= 0}
+            disabled={yearRerolls <= 0 || !sameYearAvailable}
+            title={sameYearAvailable ? undefined : NO_ALTERNATIVE_MESSAGE}
             className="glass-card inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-medium disabled:opacity-40 hover:ring-1 hover:ring-[color:var(--gold)]/50"
           >
             <Calendar className="h-3.5 w-3.5 text-gold" />
@@ -179,7 +196,8 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
           </button>
           <button
             onClick={rerollSameTeam}
-            disabled={teamRerolls <= 0}
+            disabled={teamRerolls <= 0 || !sameTeamAvailable}
+            title={sameTeamAvailable ? undefined : NO_ALTERNATIVE_MESSAGE}
             className="glass-card inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-medium disabled:opacity-40 hover:ring-1 hover:ring-[color:var(--gold)]/50"
           >
             <Users2 className="h-3.5 w-3.5 text-gold" />
@@ -197,6 +215,11 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
             <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--destructive)]/50 bg-[color:var(--destructive)]/10 px-3 py-1 text-[11px] text-[color:var(--destructive)]">
               <AlertTriangle className="h-3 w-3" />
               No valid picks — auto-reshuffling
+            </span>
+          )}
+          {(!sameYearAvailable || !sameTeamAvailable) && (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] px-3 py-1 text-[11px] text-muted-foreground">
+              {NO_ALTERNATIVE_MESSAGE}
             </span>
           )}
         </div>

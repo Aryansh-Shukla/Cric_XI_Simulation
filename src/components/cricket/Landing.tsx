@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Play, Calendar, Trophy, HelpCircle, Users } from "lucide-react";
+import { HowToPlay } from "./HowToPlay";
 
 interface Props { onPlay: () => void; }
 
@@ -10,6 +12,7 @@ const recentWinners = [
 ];
 
 export function Landing({ onPlay }: Props) {
+  const [howToOpen, setHowToOpen] = useState(false);
   return (
     <div className="relative min-h-screen overflow-hidden">
       <div className="pointer-events-none absolute inset-0" style={{ background: "var(--gradient-hero)" }} />
@@ -32,16 +35,34 @@ export function Landing({ onPlay }: Props) {
           <button onClick={onPlay} className="btn-gold inline-flex items-center gap-2 rounded-full px-6 py-3 text-base font-semibold">
             <Play className="h-4 w-4" /> Play Now
           </button>
-          <button className="btn-ghost-gold inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-medium">
+          <button
+            type="button"
+            disabled
+            title="Coming soon"
+            className="btn-ghost-gold inline-flex cursor-not-allowed items-center gap-2 rounded-full px-5 py-3 text-sm font-medium opacity-50"
+          >
             <Calendar className="h-4 w-4" /> Daily Challenge
+            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wider">Coming Soon</span>
           </button>
-          <button className="btn-ghost-gold inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-medium">
+          <button
+            type="button"
+            disabled
+            title="Coming soon"
+            className="btn-ghost-gold inline-flex cursor-not-allowed items-center gap-2 rounded-full px-5 py-3 text-sm font-medium opacity-50"
+          >
             <Trophy className="h-4 w-4" /> Leaderboard
+            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wider">Coming Soon</span>
           </button>
-          <button className="btn-ghost-gold inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-medium">
+          <button
+            type="button"
+            onClick={() => setHowToOpen(true)}
+            className="btn-ghost-gold inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-medium"
+          >
             <HelpCircle className="h-4 w-4" /> How To Play
           </button>
         </motion.div>
+
+        <HowToPlay open={howToOpen} onOpenChange={setHowToOpen} />
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.6 }} className="mt-14 w-full max-w-3xl">
           <div className="mb-3 flex items-center gap-2 px-2 text-xs uppercase tracking-widest text-muted-foreground">

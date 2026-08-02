@@ -2,7 +2,8 @@ import type {
   Player, GameMode, MatchResult, LimitedScorecard, StageKind,
 } from "./types";
 import { KNOCKOUT_STAGES } from "./types";
-import { CHEMISTRY, SQUADS_BY_MODE } from "./data";
+import { CHEMISTRY } from "./data";
+import { DraftPoolService } from "@/services/DraftPoolService";
 import { pickCaptain } from "./rules";
 import { computeTeamRating, overall } from "./rating";
 import { mulberry32, childRng, type Rng } from "./sim/rng";
@@ -30,7 +31,7 @@ export function teamStrength(players: Player[]) {
 export type { Opponent } from "./sim/limited";
 
 export function generateOpponents(mode: GameMode, rng: Rng, count = 3): Opponent[] {
-  const pool = SQUADS_BY_MODE[mode];
+  const pool = DraftPoolService.getPool(mode);
   const opps: Opponent[] = [];
   const used = new Set<string>();
   for (let i = 0; i < count; i++) {
