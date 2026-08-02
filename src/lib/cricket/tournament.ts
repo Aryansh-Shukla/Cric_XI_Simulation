@@ -3,7 +3,8 @@ import type {
   PlayerAgg, FullInnings,
 } from "./types";
 import { KNOCKOUT_STAGES } from "./types";
-import { SQUADS_BY_MODE, CHEMISTRY } from "./data";
+import { CHEMISTRY } from "./data";
+import { DraftPoolService } from "@/services/DraftPoolService";
 import { pickCaptain } from "./rules";
 import { computeTeamRating, overall } from "./rating";
 import { mulberry32, childRng, type Rng } from "./sim/rng";
@@ -28,7 +29,7 @@ function chemistryBonus(players: Player[]): number {
 }
 
 function buildOpponents(mode: GameMode, rng: Rng, count: number): Opponent[] {
-  const pool = SQUADS_BY_MODE[mode];
+  const pool = DraftPoolService.getPool(mode);
   const out: Opponent[] = [];
   const used = new Set<string>();
   for (let i = 0; i < count; i++) {
