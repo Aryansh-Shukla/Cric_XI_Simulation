@@ -40,6 +40,8 @@ export interface PlayerStats {
 
 export interface Player {
   id: string;
+  /** Stable identity of the real human being, shared across every era/profile. */
+  canonicalId?: string;
   name: string;
   country: string;
   role: Role;
@@ -56,6 +58,10 @@ export interface Squad {
   year: number;
   mode: GameMode;
   players: Player[];
+  /** Present when the squad comes from the historical catalogue. */
+  competitionId?: string;
+  editionId?: string;
+  teamId?: string;
 }
 
 export interface DraftRound {
