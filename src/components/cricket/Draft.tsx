@@ -2,10 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, Circle, Lock, Sparkles, Users, Globe2, TrendingUp, Shuffle, Calendar, Users2, AlertTriangle } from "lucide-react";
 import { PlayerCard } from "./PlayerCard";
-import { SQUADS_BY_MODE, MODE_LABELS } from "@/lib/cricket/data";
+import { MODE_LABELS } from "@/lib/cricket/data";
 import type { Difficulty, GameMode, Player, Squad } from "@/lib/cricket/types";
 import { computeStatus, canPickPlayer, overseasCount, estimatedRating } from "@/lib/cricket/requirements";
 import { activatedChemistry } from "@/lib/cricket/simulation";
+import { DraftPoolService } from "@/services/DraftPoolService";
+import { PlayerEligibilityService } from "@/services/PlayerEligibilityService";
+import { RerollService, NO_ALTERNATIVE_MESSAGE } from "@/services/RerollService";
 
 interface Props {
   mode: GameMode;
@@ -25,8 +28,8 @@ function shuffle<T>(arr: T[]): T[] {
 const REROLL_LIMIT = 4;
 
 function pickChoices(squad: Squad, picked: Player[], mode: GameMode, remainingSlots: number, prioritizeValid = false): Player[] {
-  const usedIds = new Set(picked.map(p => p.id));
-  const pool = squad.players.filter(p => !usedIds.has(p.id));
+  // Canonical enforcement: every profile of an already-drafted cricketer is removed.
+  const pool = PlayerEligibilityService.filterEligible(squad.players, picked);
   if (!pool.length) return [];
   if (prioritizeValid) {
     const valid = pool.filter(p => canPickPlayer(p, { picked, mode, remainingSlots }).canPick);
