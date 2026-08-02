@@ -186,7 +186,8 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
         <div className="mt-5 flex flex-wrap items-center gap-2">
           <button
             onClick={rerollSameYear}
-            disabled={yearRerolls <= 0}
+            disabled={yearRerolls <= 0 || !sameYearAvailable}
+            title={sameYearAvailable ? undefined : NO_ALTERNATIVE_MESSAGE}
             className="glass-card inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-medium disabled:opacity-40 hover:ring-1 hover:ring-[color:var(--gold)]/50"
           >
             <Calendar className="h-3.5 w-3.5 text-gold" />
@@ -195,7 +196,8 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
           </button>
           <button
             onClick={rerollSameTeam}
-            disabled={teamRerolls <= 0}
+            disabled={teamRerolls <= 0 || !sameTeamAvailable}
+            title={sameTeamAvailable ? undefined : NO_ALTERNATIVE_MESSAGE}
             className="glass-card inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-medium disabled:opacity-40 hover:ring-1 hover:ring-[color:var(--gold)]/50"
           >
             <Users2 className="h-3.5 w-3.5 text-gold" />
@@ -213,6 +215,11 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
             <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--destructive)]/50 bg-[color:var(--destructive)]/10 px-3 py-1 text-[11px] text-[color:var(--destructive)]">
               <AlertTriangle className="h-3 w-3" />
               No valid picks — auto-reshuffling
+            </span>
+          )}
+          {(!sameYearAvailable || !sameTeamAvailable) && (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] px-3 py-1 text-[11px] text-muted-foreground">
+              {NO_ALTERNATIVE_MESSAGE}
             </span>
           )}
         </div>
