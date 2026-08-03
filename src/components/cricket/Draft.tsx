@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, Circle, Lock, Sparkles, Users, Globe2, TrendingUp, Shuffle, Calendar, Users2, AlertTriangle } from "lucide-react";
 import { PlayerCard } from "./PlayerCard";
@@ -85,6 +85,7 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
   const [recentSquadIds, setRecentSquadIds] = useState<string[]>([]);
   const [yearRerolls, setYearRerolls] = useState(REROLL_LIMIT);
   const [teamRerolls, setTeamRerolls] = useState(REROLL_LIMIT);
+  const rescueAttempts = useRef(0);
 
   // Deal the opening round from the squad that is actually on screen.
   useEffect(() => {
@@ -115,6 +116,7 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
     if (!check.canPick) return;
     const next = [...picked, p];
     setPicked(next);
+    rescueAttempts.current = 0;
     if (next.length === 11) {
       setTimeout(() => onComplete(next), 400);
     } else {
@@ -191,7 +193,12 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
   // so a rescue that still fails triggers another attempt instead of dead-ending.
   useEffect(() => {
     if (picked.length >= 11) return;
-    if (softLocked) reshuffle();
+    if (!softLocked) { rescueAttempts.current = 0; return; }
+    // Bounded retries: the feasibility guard makes a true dead-end impossible,
+    // but never spin the renderer if one somehow occurs.
+    if (rescueAttempts.current >= 8) return;
+    rescueAttempts.current += 1;
+    reshuffle();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [softLocked, choices, picked.length]);
 
