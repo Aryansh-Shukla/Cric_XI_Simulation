@@ -128,16 +128,17 @@ export function createTournament(
   const rng = mulberry32(seed);
   const captain = (captainId && players.find(p => p.id === captainId)) || pickCaptain(players);
   const stages = stagesFor(mode);
-  const userOpps = buildOpponents(mode, rng, stages.length);
-  const fixtures: Fixture[] = stages.map((stage, i) => {
-    const opponent = userOpps[i];
-    // AI-vs-AI: pick two additional pool squads (best-effort, may be duplicates of user opps)
-    const aiPair = buildOpponents(mode, rng, 2);
-    return { stage, opponent, aiA: aiPair[0], aiB: aiPair[1] };
-  });
+  // One coherent competition field: the user's opponents are drawn from the same
+  // set of teams that contest the background matchdays, so the table adds up.
+  const field = mode === "TEST"
+    ? buildOpponents(mode, rng, 1)
+    : buildOpponents(mode, rng, Math.max(6, Math.min(8, stages.length + 2)));
+  const fixtures: Fixture[] = stages.map((stage, i) => ({
+    stage,
+    opponent: field[i % field.length],
+  }));
   const ratingSnapshot = computeTeamRating(players).overall;
   const chem = chemistryBonus(players);
-  const field = mode === "TEST" ? [] : buildOpponents(mode, rng, 6);
 
   return {
     mode, ourName, players, captain, seed,
@@ -152,7 +153,7 @@ export function createTournament(
     finalScore: 0,
     playerStats: {},
     aiSeed: Math.floor(rng() * 1e9),
-    field,
+    field: mode === "TEST" ? [] : field,
     standings: {},
   };
 }
