@@ -286,6 +286,10 @@ export function advanceTournament(prev: TournamentState): TournamentState {
   state.finalStageReached = fixture.stage;
   const matchRng = childRng(mulberry32(state.seed + i * 7919 + 13));
 
+  // Knockout opponents are seeded from the actual points table, not the schedule.
+  const knockoutOpponent = pickKnockoutOpponent(state, fixture);
+  if (knockoutOpponent) fixture.opponent = knockoutOpponent;
+
   // User match
   let r: MatchResult;
   if (state.mode === "TEST") {
@@ -352,6 +356,26 @@ export function advanceTournament(prev: TournamentState): TournamentState {
 }
 
 function finalize(state: TournamentState): TournamentState {
+  return finalizeInner(state);
+}
+
+/** Seeds a knockout fixture from the standings so playoffs follow real results. */
+function pickKnockoutOpponent(state: TournamentState, fixture: Fixture): Opponent | null {
+  if (state.mode === "TEST" || !state.field.length) return null;
+  const ko: Record<string, number> = {
+    "Qualifier 1": 0, "Semi Final": 0, "Final": 1, "Qualifier 2": 2, "Eliminator": 2, "Quarter Final": 3,
+  };
+  const seed = ko[fixture.stage];
+  if (seed === undefined) return null;
+  const ranked = standingsTable(state)
+    .filter(r => !r.isOurs)
+    .map(r => state.field.find(o => o.name === r.name))
+    .filter((o): o is Opponent => Boolean(o));
+  if (!ranked.length) return null;
+  return ranked[Math.min(seed, ranked.length - 1)];
+}
+
+function finalizeInner(state: TournamentState): TournamentState {
   if (!state.complete) return state;
   const last = state.results[state.results.length - 1];
   let championshipWon = false;
