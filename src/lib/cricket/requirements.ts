@@ -43,6 +43,50 @@ export interface Pickability {
   reason?: string;
 }
 
+const ROLES = ["Batsman", "Wicketkeeper", "AllRounder", "PaceBowler", "SpinBowler"] as const;
+type RoleKey = (typeof ROLES)[number];
+
+/** Which roles can satisfy each requirement, derived from the requirement matcher. */
+function rolesSatisfying(req: Requirement): RoleKey[] {
+  return ROLES.filter(role => req.matches({ role } as unknown as Player));
+}
+
+/**
+ * Exact feasibility: is there ANY distribution of the remaining slots across the
+ * five roles that satisfies every requirement? The old heuristic only looked at
+ * the largest single deficit, so two disjoint one-slot deficits (e.g. a spinner
+ * AND a pace bowler with one slot left) slipped through and dead-ended the draft.
+ */
+export function canCompleteXI(picked: Player[], mode: GameMode, slotsLeft: number): boolean {
+  const reqs = requirementsFor(mode).map(r => ({
+    roles: rolesSatisfying(r),
+    deficit: Math.max(0, r.required - picked.filter(r.matches).length),
+  })).filter(r => r.deficit > 0);
+  if (!reqs.length) return true;
+  if (slotsLeft <= 0) return false;
+
+  const counts: Record<RoleKey, number> = {
+    Batsman: 0, Wicketkeeper: 0, AllRounder: 0, PaceBowler: 0, SpinBowler: 0,
+  };
+  const batsmenPicked = picked.filter(p => p.role === "Batsman").length;
+
+  const satisfied = () => reqs.every(r => r.roles.reduce((s, role) => s + counts[role], 0) >= r.deficit);
+
+  // Enumerate every composition of slotsLeft across 5 roles (at most ~1.4k cases).
+  const walk = (idx: number, left: number): boolean => {
+    if (idx === ROLES.length) return left >= 0 && satisfied();
+    const role = ROLES[idx];
+    const cap = role === "Batsman" ? Math.min(left, Math.max(0, 7 - batsmenPicked)) : left;
+    for (let n = cap; n >= 0; n--) {
+      counts[role] = n;
+      if (walk(idx + 1, left - n)) { counts[role] = 0; return true; }
+    }
+    counts[role] = 0;
+    return false;
+  };
+  return walk(0, slotsLeft);
+}
+
 /**
  * Enforce hard rules at pick-time so an invalid XI is unreachable.
  * - Franchise: max 4 overseas
@@ -62,19 +106,10 @@ export function canPickPlayer(player: Player, ctx: PickabilityContext): Pickabil
     if (batsmen >= 7) return { canPick: false, reason: "Max 7 specialist batsmen" };
   }
 
-  // Feasibility: after adding this player, can we still fill every unmet requirement?
+  // Feasibility: after adding this player, can the remaining slots still complete a legal XI?
   const hypothetical = [...picked, player];
-  const slotsAfter = remainingSlots - 1;
-  const status = computeStatus(hypothetical, mode);
-  const deficits = status.reduce((s, r) => s + Math.max(0, r.required - r.filled), 0);
-  // Some requirements overlap (e.g. AR counts for bowl), so use max single-req deficit as a hard floor.
-  const maxSingle = status.reduce((m, r) => Math.max(m, Math.max(0, r.required - r.filled)), 0);
-  if (maxSingle > slotsAfter) {
+  if (!canCompleteXI(hypothetical, mode, remainingSlots - 1)) {
     return { canPick: false, reason: "Would make the XI unfillable" };
-  }
-  if (deficits > slotsAfter * 3) {
-    // fallback guard, rarely trips
-    return { canPick: false, reason: "Team balance impossible" };
   }
   return { canPick: true };
 }
