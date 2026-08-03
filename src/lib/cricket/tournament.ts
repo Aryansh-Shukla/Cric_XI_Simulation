@@ -306,6 +306,8 @@ export function advanceTournament(prev: TournamentState): TournamentState {
   if (state.mode !== "TEST" && state.field.length >= 2) {
     for (const [m, [a, b]] of roundRobinRound(state.field, i).entries()) {
       if (a.name === b.name) continue;
+      // Skip the team that is busy playing us on this matchday.
+      if (a.name === fixture.opponent.name || b.name === fixture.opponent.name) continue;
       const aiRng = childRng(mulberry32(state.aiSeed + i * 3527 + m * 101));
       const aiR = simulateLimitedMatch(a.name, a.players, b, state.mode, fixture.stage, aiRng, 0);
       state.aiResults.push(aiR);
