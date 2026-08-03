@@ -257,6 +257,7 @@ export function advanceTournament(prev: TournamentState): TournamentState {
   if (prev.complete) return prev;
   const state: TournamentState = {
     ...prev,
+    fixtures: [...prev.fixtures],
     results: [...prev.results],
     aiResults: [...prev.aiResults],
     playerStats: { ...prev.playerStats },
@@ -282,13 +283,10 @@ export function advanceTournament(prev: TournamentState): TournamentState {
     return finalize(state);
   }
 
+  seedKnockoutFixture(state, i);
   const fixture = state.fixtures[i];
   state.finalStageReached = fixture.stage;
   const matchRng = childRng(mulberry32(state.seed + i * 7919 + 13));
-
-  // Knockout opponents are seeded from the actual points table, not the schedule.
-  const knockoutOpponent = pickKnockoutOpponent(state, fixture);
-  if (knockoutOpponent) fixture.opponent = knockoutOpponent;
 
   // User match
   let r: MatchResult;
@@ -352,7 +350,19 @@ export function advanceTournament(prev: TournamentState): TournamentState {
   if (state.eliminated || state.currentIndex >= state.fixtures.length) {
     state.complete = true;
   }
+  // Seed the upcoming knockout now so the "Next match" card shows the real opponent.
+  if (!state.complete) seedKnockoutFixture(state, state.currentIndex);
   return finalize(state);
+}
+
+/** Replaces a knockout fixture's opponent with the correctly seeded team. */
+function seedKnockoutFixture(state: TournamentState, index: number) {
+  const fixture = state.fixtures[index];
+  if (!fixture) return;
+  const opponent = pickKnockoutOpponent(state, fixture);
+  if (opponent && opponent.name !== fixture.opponent.name) {
+    state.fixtures[index] = { ...fixture, opponent };
+  }
 }
 
 function finalize(state: TournamentState): TournamentState {
