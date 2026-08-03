@@ -122,6 +122,8 @@ function ensureAgg(store: Record<string, PlayerAgg>, name: string, team: string,
   if (!store[k]) {
     store[k] = { name, team, matches: 0, runs: 0, balls: 0, fours: 0, sixes: 0, wickets: 0, ballsBowled: 0, runsConceded: 0, isOurs };
   }
+  // Ownership can be discovered later (a player may first appear as a bowler).
+  if (isOurs) store[k].isOurs = true;
   return store[k];
 }
 
@@ -146,7 +148,10 @@ function accumulate(store: Record<string, PlayerAgg>, r: MatchResult, isOurs: bo
       seen.add(b.name);
     }
     for (const bw of inn.bowlers) {
-      const a = ensureAgg(store, bw.name, team === r.ourName ? r.oppName : r.ourName, teamIsOurs);
+      // Bowlers in an innings belong to the FIELDING side, i.e. the other team.
+      const bowlingTeam = team === r.ourName ? r.oppName : r.ourName;
+      const bowlerIsOurs = isOurs && bowlingTeam === r.ourName;
+      const a = ensureAgg(store, bw.name, bowlingTeam, bowlerIsOurs);
       a.wickets += bw.wickets;
       a.ballsBowled += ballsFromOvers(bw.overs);
       a.runsConceded += bw.runs;

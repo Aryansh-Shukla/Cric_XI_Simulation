@@ -40,6 +40,37 @@ function pickChoices(squad: Squad, picked: Player[], mode: GameMode, remainingSl
   return shuffle(pool).slice(0, 5);
 }
 
+/** True when the squad can offer at least one legal pick for the current XI. */
+function squadHasValidPick(squad: Squad, picked: Player[], mode: GameMode, remainingSlots: number): boolean {
+  return PlayerEligibilityService.filterEligible(squad.players, picked)
+    .some(pl => canPickPlayer(pl, { picked, mode, remainingSlots }).canPick);
+}
+
+/**
+ * Emergency recovery: find a squad that guarantees a legal pick. Falls back to a
+ * cross-pool selection of legal players so the draft can never dead-end.
+ */
+function rescueDeal(
+  pool: Squad[], picked: Player[], mode: GameMode, remainingSlots: number,
+): { squad: Squad | null; choices: Player[] } {
+  const shuffled = shuffle(pool);
+  const rescueSquad = shuffled.find(s => squadHasValidPick(s, picked, mode, remainingSlots));
+  if (rescueSquad) {
+    return { squad: rescueSquad, choices: pickChoices(rescueSquad, picked, mode, remainingSlots, true) };
+  }
+  // Last resort: build a mixed pool of any legal player anywhere in the catalogue.
+  const everyone = PlayerEligibilityService.filterEligible(shuffled.flatMap(s => s.players), picked);
+  const legal = everyone.filter(p => canPickPlayer(p, { picked, mode, remainingSlots }).canPick);
+  if (legal.length) return { squad: null, choices: shuffle(legal).slice(0, 5) };
+  // Absolute floor: ignore soft feasibility guards, keep only hard caps satisfied.
+  const relaxed = everyone.filter(p => {
+    if (mode === "FRANCHISE_T20" && p.isOverseas && picked.filter(x => x.isOverseas).length >= 4) return false;
+    if (p.role === "Batsman" && picked.filter(x => x.role === "Batsman").length >= 7) return false;
+    return true;
+  });
+  return { squad: null, choices: shuffle(relaxed).slice(0, 5) };
+}
+
 export function Draft({ mode, difficulty, onComplete }: Props) {
   const [picked, setPicked] = useState<Player[]>([]);
   const round = picked.length + 1;
@@ -47,20 +78,35 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
 
   const pool = useMemo(() => DraftPoolService.getPool(mode), [mode]);
 
+  // Single source of truth: label and players MUST come from the same HistoricalSquad.
   const [squad, setSquad] = useState<Squad>(() => shuffle(pool)[0]);
-  const [choices, setChoices] = useState<Player[]>(() => pickChoices(shuffle(pool)[0], [], mode, 11));
+  const [choices, setChoices] = useState<Player[]>(() => []);
+  const [emergency, setEmergency] = useState(false);
   const [recentSquadIds, setRecentSquadIds] = useState<string[]>([]);
   const [yearRerolls, setYearRerolls] = useState(REROLL_LIMIT);
   const [teamRerolls, setTeamRerolls] = useState(REROLL_LIMIT);
 
+  // Deal the opening round from the squad that is actually on screen.
+  useEffect(() => {
+    setChoices(pickChoices(squad, [], mode, 11, true));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Advance to a fresh squad + choices when a player is picked (round changes)
   const advanceRound = useCallback((nextPicked: Player[]) => {
     if (nextPicked.length >= 11) return;
+    const slots = 11 - nextPicked.length;
     const avoid = new Set([...recentSquadIds.slice(-3), squad.id]);
-    const candidates = pool.filter(s => !avoid.has(s.id));
-    const nextSquad = (candidates.length ? shuffle(candidates) : shuffle(pool))[0];
+    const candidates = shuffle(pool.filter(s => !avoid.has(s.id)));
+    // Prefer a squad that can actually offer a legal pick — never deal a dead round.
+    const nextSquad =
+      candidates.find(s => squadHasValidPick(s, nextPicked, mode, slots))
+      ?? shuffle(pool).find(s => squadHasValidPick(s, nextPicked, mode, slots))
+      ?? candidates[0]
+      ?? shuffle(pool)[0];
     setSquad(nextSquad);
-    setChoices(pickChoices(nextSquad, nextPicked, mode, 11 - nextPicked.length));
+    setEmergency(false);
+    setChoices(pickChoices(nextSquad, nextPicked, mode, slots, true));
     setRecentSquadIds(r => [...r, nextSquad.id].slice(-5));
   }, [pool, mode, recentSquadIds, squad.id]);
 
@@ -89,9 +135,11 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
   const applyReroll = (candidates: Squad[]) => {
     const fallback = candidates.length ? candidates : [];
     if (!fallback.length) return false;
-    const next = shuffle(fallback)[0];
+    const shuffled = shuffle(fallback);
+    const next = shuffled.find(s => squadHasValidPick(s, picked, mode, remainingSlots)) ?? shuffled[0];
     setSquad(next);
-    setChoices(pickChoices(next, picked, mode, remainingSlots));
+    setEmergency(false);
+    setChoices(pickChoices(next, picked, mode, remainingSlots, true));
     setRecentSquadIds(r => [...r, next.id].slice(-5));
     return true;
   };
@@ -115,34 +163,37 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
   const sameYearAvailable = sameYearOptions.length > 0 || RerollService.sameYearDifferentTeam(squad, mode).length > 0;
   const sameTeamAvailable = sameTeamOptions.length > 0 || RerollService.sameTeamDifferentYear(squad, mode).length > 0;
 
-  const reshuffle = () => {
+  const reshuffle = useCallback(() => {
     // Try same squad first, prioritizing valid picks
     const fresh = pickChoices(squad, picked, mode, remainingSlots, true);
-    const anyValid = fresh.some(p => canPickPlayer(p, { picked, mode, remainingSlots }).canPick);
-    if (fresh.length && anyValid) {
+    if (fresh.length && fresh.some(p => canPickPlayer(p, { picked, mode, remainingSlots }).canPick)) {
+      setEmergency(false);
       setChoices(fresh);
       return;
     }
-    // Fall back to a different squad that contains a valid pick
-    const rescueSquad = shuffle(pool).find(s =>
-      PlayerEligibilityService.filterEligible(s.players, picked)
-        .some(pl => canPickPlayer(pl, { picked, mode, remainingSlots }).canPick)
-    );
-    if (rescueSquad) {
-      setSquad(rescueSquad);
-      setChoices(pickChoices(rescueSquad, picked, mode, remainingSlots, true));
-      setRecentSquadIds(r => [...r, rescueSquad.id].slice(-5));
+    // Emergency recovery — guaranteed to produce a playable round.
+    const rescue = rescueDeal(pool, picked, mode, remainingSlots);
+    if (!rescue.choices.length) return;
+    if (rescue.squad) {
+      setSquad(rescue.squad);
+      setEmergency(false);
+      setRecentSquadIds(r => [...r, rescue.squad!.id].slice(-5));
+    } else {
+      setEmergency(true);
     }
-  };
+    setChoices(rescue.choices);
+  }, [pool, picked, mode, remainingSlots, squad]);
 
   const validCount = choices.filter(p => canPickPlayer(p, { picked, mode, remainingSlots }).canPick).length;
-  const softLocked = choices.length > 0 && validCount === 0;
+  const softLocked = validCount === 0;
 
-  // Auto-rescue: if we deal a fully locked round, reshuffle once so the user never soft-locks.
+  // Auto-rescue: keep re-dealing until a legal pick exists. Depends on `choices`
+  // so a rescue that still fails triggers another attempt instead of dead-ending.
   useEffect(() => {
+    if (picked.length >= 11) return;
     if (softLocked) reshuffle();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [softLocked]);
+  }, [softLocked, choices, picked.length]);
 
   const status = computeStatus(picked, mode);
   const overseas = overseasCount(picked);
@@ -161,7 +212,7 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
             <p className="mt-1 text-sm text-muted-foreground">
               Pick one player from{" "}
               <span className="font-medium text-foreground">
-                {difficulty === "Legend" ? "a mystery squad" : squad.label}
+                {difficulty === "Legend" ? "a mystery squad" : emergency ? "the emergency draft pool" : squad.label}
               </span>
             </p>
           </div>
@@ -243,7 +294,7 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
                         <PlayerCard
                           player={pl}
                           difficulty={difficulty}
-                          squadLabel={difficulty === "Legend" ? undefined : squad.label}
+                          squadLabel={difficulty === "Legend" || emergency ? undefined : squad.label}
                           onSelect={() => select(pl)}
                         />
                       </div>
