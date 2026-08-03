@@ -312,11 +312,14 @@ function LeaderTable({ title, rows, kind }: { title: string; rows: PlayerAgg[]; 
               const sr = p.balls ? Math.round((p.runs * 100) / p.balls) : 0;
               const econ = p.ballsBowled ? Math.round((p.runsConceded * 6 / p.ballsBowled) * 100) / 100 : 0;
               return (
-                <tr key={i} className="border-t border-[color:var(--border)]/40">
+                <tr
+                  key={i}
+                  className={`border-t border-[color:var(--border)]/40 ${p.isOurs ? "bg-[color:var(--gold)]/10" : ""}`}
+                >
                   <td className="px-3 py-1.5">
-                    <span className={p.isOurs ? "text-gold" : ""}>{p.name}</span>
+                    <span className={p.isOurs ? "font-semibold text-gold" : ""}>{p.name}</span>
                   </td>
-                  <td className="px-3 py-1.5 text-muted-foreground">{p.team}</td>
+                  <td className={`px-3 py-1.5 ${p.isOurs ? "text-gold/80" : "text-muted-foreground"}`}>{p.team}</td>
                   <td className="px-3 py-1.5 text-right">{p.matches}</td>
                   {kind === "bat" ? (
                     <>
@@ -340,28 +343,15 @@ function LeaderTable({ title, rows, kind }: { title: string; rows: PlayerAgg[]; 
 }
 
 function StandingsPanel({ state }: { state: TournamentState }) {
-  // Simple standings from user results only
-  const rows: { name: string; p: number; w: number; l: number; pts: number }[] = [
-    { name: state.ourName, p: state.results.length, w: state.wins, l: state.losses, pts: state.wins * 2 + state.draws },
-  ];
-  const oppSeen = new Map<string, { w: number; l: number; p: number }>();
-  for (const r of state.results) {
-    if (!("weWon" in r)) continue;
-    const name = r.oppName;
-    const cur = oppSeen.get(name) ?? { w: 0, l: 0, p: 0 };
-    cur.p++;
-    if (r.weWon) cur.l++; else cur.w++;
-    oppSeen.set(name, cur);
-  }
-  for (const [name, v] of oppSeen) rows.push({ name, p: v.p, w: v.w, l: v.l, pts: v.w * 2 });
-  rows.sort((a, b) => b.pts - a.pts || b.w - a.w);
+  // Whole-tournament table: user matches plus every background AI matchday.
+  const rows = standingsTable(state);
 
   return (
     <div className="glass-card overflow-hidden rounded-2xl">
       <div className="border-b border-[color:var(--border)] px-4 py-3">
         <div className="text-xs uppercase tracking-widest text-gold">Standings</div>
       </div>
-      {rows.every(r => r.p === 0) ? (
+      {rows.length === 0 ? (
         <div className="p-6 text-center text-xs text-muted-foreground">Play a match to populate the table.</div>
       ) : (
         <table className="w-full text-xs">
@@ -371,19 +361,29 @@ function StandingsPanel({ state }: { state: TournamentState }) {
               <th className="px-3 py-2 text-right">P</th>
               <th className="px-3 py-2 text-right">W</th>
               <th className="px-3 py-2 text-right">L</th>
+              <th className="px-3 py-2 text-right">NRR</th>
               <th className="px-3 py-2 text-right">Pts</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((r, i) => (
-              <tr key={i} className="border-t border-[color:var(--border)]/40">
-                <td className={`px-3 py-1.5 ${r.name === state.ourName ? "text-gold" : ""}`}>{r.name}</td>
-                <td className="px-3 py-1.5 text-right">{r.p}</td>
-                <td className="px-3 py-1.5 text-right">{r.w}</td>
-                <td className="px-3 py-1.5 text-right">{r.l}</td>
-                <td className="px-3 py-1.5 text-right font-semibold">{r.pts}</td>
-              </tr>
-            ))}
+            {rows.map((r, i) => {
+              const nrr = netRunRate(r);
+              return (
+                <tr
+                  key={r.name}
+                  className={`border-t border-[color:var(--border)]/40 ${r.isOurs ? "bg-[color:var(--gold)]/10" : ""}`}
+                >
+                  <td className={`px-3 py-1.5 ${r.isOurs ? "font-semibold text-gold" : ""}`}>
+                    <span className="mr-2 text-muted-foreground">{i + 1}</span>{r.name}
+                  </td>
+                  <td className="px-3 py-1.5 text-right">{r.played}</td>
+                  <td className="px-3 py-1.5 text-right">{r.wins}</td>
+                  <td className="px-3 py-1.5 text-right">{r.losses}</td>
+                  <td className="px-3 py-1.5 text-right">{nrr > 0 ? `+${nrr.toFixed(2)}` : nrr.toFixed(2)}</td>
+                  <td className="px-3 py-1.5 text-right font-semibold">{r.points}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       )}
