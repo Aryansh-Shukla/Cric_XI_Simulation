@@ -286,13 +286,8 @@ export function advanceTournament(prev: TournamentState): TournamentState {
   // Background round: every other team in the field plays this matchday too, so
   // the points table, NRR and stat leaders cover the whole tournament.
   if (state.mode !== "TEST" && state.field.length >= 2) {
-    const field = state.field;
-    const half = Math.floor(field.length / 2);
-    for (let m = 0; m < half; m++) {
-      // Rotating pairings so the same two teams don't meet every round.
-      const a = field[m];
-      const b = field[(field.length - 1 - m + i) % field.length];
-      if (!a || !b || a.name === b.name) continue;
+    for (const [m, [a, b]] of roundRobinRound(state.field, i).entries()) {
+      if (a.name === b.name) continue;
       const aiRng = childRng(mulberry32(state.aiSeed + i * 3527 + m * 101));
       const aiR = simulateLimitedMatch(a.name, a.players, b, state.mode, fixture.stage, aiRng, 0);
       state.aiResults.push(aiR);
