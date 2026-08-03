@@ -72,6 +72,23 @@ export function netRunRate(r: StandingRow): number {
   return Math.round((forRate - againstRate) * 1000) / 1000;
 }
 
+/**
+ * Circle-method round robin: every field team plays exactly once per matchday,
+ * so the points table stays even across the tournament.
+ */
+function roundRobinRound(field: Opponent[], round: number): [Opponent, Opponent][] {
+  const teams = [...field];
+  if (teams.length % 2 === 1) teams.push(teams[0]); // odd field: one team repeats
+  const n = teams.length;
+  const fixed = teams[0];
+  const rotating = teams.slice(1);
+  const shift = round % rotating.length;
+  const order = [...rotating.slice(shift), ...rotating.slice(0, shift)];
+  const pairs: [Opponent, Opponent][] = [[fixed, order[0]]];
+  for (let k = 1; k < n / 2; k++) pairs.push([order[k], order[order.length - k]]);
+  return pairs;
+}
+
 export interface TournamentState {
   mode: GameMode;
   ourName: string;
