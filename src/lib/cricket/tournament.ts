@@ -171,10 +171,12 @@ export function standingsTable(state: TournamentState): StandingRow[] {
   );
 }
 
-function statKey(name: string) { return name; }
+/** Stats are per player PER TEAM — the same historical name can appear for
+ *  our XI and for an AI squad in the same tournament. */
+function statKey(name: string, team: string) { return `${team}::${name}`; }
 
 function ensureAgg(store: Record<string, PlayerAgg>, name: string, team: string, isOurs: boolean): PlayerAgg {
-  const k = statKey(name);
+  const k = statKey(name, team);
   if (!store[k]) {
     store[k] = { name, team, matches: 0, runs: 0, balls: 0, fours: 0, sixes: 0, wickets: 0, ballsBowled: 0, runsConceded: 0, isOurs };
   }
@@ -201,7 +203,7 @@ function accumulate(store: Record<string, PlayerAgg>, r: MatchResult, isOurs: bo
       a.balls += b.balls;
       a.fours += b.fours;
       a.sixes += b.sixes;
-      seen.add(b.name);
+      seen.add(statKey(b.name, team));
     }
     for (const bw of inn.bowlers) {
       // Bowlers in an innings belong to the FIELDING side, i.e. the other team.
@@ -211,7 +213,7 @@ function accumulate(store: Record<string, PlayerAgg>, r: MatchResult, isOurs: bo
       a.wickets += bw.wickets;
       a.ballsBowled += ballsFromOvers(bw.overs);
       a.runsConceded += bw.runs;
-      seen.add(bw.name);
+      seen.add(statKey(bw.name, bowlingTeam));
     }
   }
   for (const n of seen) store[n].matches += 1;
