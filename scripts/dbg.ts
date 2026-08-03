@@ -1,0 +1,13 @@
+import { createTournament, advanceTournament } from "@/lib/cricket/tournament";
+import { DraftPoolService } from "@/services/DraftPoolService";
+import { overall } from "@/lib/cricket/rating";
+const pool = DraftPoolService.getPool("ODI_WC");
+const xi = [...pool[0].players].sort((a,b)=>overall(b)-overall(a)).slice(0,11);
+let st = createTournament(xi, "ODI_WC", 42);
+st = advanceTournament(st);
+const r = st.results[0] as any;
+console.log("ourName", r.ourName, "opp", r.oppName);
+console.log(r.full.map((i:any)=>({team:i.teamName, batters:i.batters.length, bowlers:i.bowlers.length})));
+const ours = Object.values(st.playerStats).filter((p:any)=>p.isOurs);
+console.log("after 1 match, our aggs:", ours.map((p:any)=>`${p.name} M${p.matches} R${p.runs} W${p.wickets}`).slice(0,14));
+console.log("total agg entries", Object.keys(st.playerStats).length);
