@@ -53,6 +53,25 @@ export interface Fixture {
   aiB?: Opponent;
 }
 
+export interface StandingRow {
+  name: string;
+  played: number;
+  wins: number;
+  losses: number;
+  points: number;
+  runsFor: number;
+  oversFor: number;
+  runsAgainst: number;
+  oversAgainst: number;
+  isOurs: boolean;
+}
+
+export function netRunRate(r: StandingRow): number {
+  const forRate = r.oversFor > 0 ? r.runsFor / r.oversFor : 0;
+  const againstRate = r.oversAgainst > 0 ? r.runsAgainst / r.oversAgainst : 0;
+  return Math.round((forRate - againstRate) * 1000) / 1000;
+}
+
 export interface TournamentState {
   mode: GameMode;
   ourName: string;
@@ -77,6 +96,9 @@ export interface TournamentState {
   finalScore: number;
   playerStats: Record<string, PlayerAgg>;
   aiSeed: number;
+  /** Persistent AI field so the points table is the same teams all tournament. */
+  field: Opponent[];
+  standings: Record<string, StandingRow>;
 }
 
 export function createTournament(
@@ -98,6 +120,7 @@ export function createTournament(
   });
   const ratingSnapshot = computeTeamRating(players).overall;
   const chem = chemistryBonus(players);
+  const field = mode === "TEST" ? [] : buildOpponents(mode, rng, 6);
 
   return {
     mode, ourName, players, captain, seed,
@@ -112,7 +135,40 @@ export function createTournament(
     finalScore: 0,
     playerStats: {},
     aiSeed: Math.floor(rng() * 1e9),
+    field,
+    standings: {},
   };
+}
+
+function ensureRow(store: Record<string, StandingRow>, name: string, isOurs: boolean): StandingRow {
+  if (!store[name]) {
+    store[name] = {
+      name, played: 0, wins: 0, losses: 0, points: 0,
+      runsFor: 0, oversFor: 0, runsAgainst: 0, oversAgainst: 0, isOurs,
+    };
+  }
+  if (isOurs) store[name].isOurs = true;
+  return store[name];
+}
+
+/** Record one limited-overs result into the points table (2 pts a win, NRR tracked). */
+function recordStanding(store: Record<string, StandingRow>, r: LimitedScorecard, ourIsUser: boolean) {
+  const home = ensureRow(store, r.ourName, ourIsUser);
+  const away = ensureRow(store, r.oppName, false);
+  home.played++; away.played++;
+  home.runsFor += r.ourInnings.runs; home.oversFor += r.ourInnings.overs;
+  home.runsAgainst += r.oppInnings.runs; home.oversAgainst += r.oppInnings.overs;
+  away.runsFor += r.oppInnings.runs; away.oversFor += r.oppInnings.overs;
+  away.runsAgainst += r.ourInnings.runs; away.oversAgainst += r.ourInnings.overs;
+  if (r.weWon) { home.wins++; home.points += 2; away.losses++; }
+  else { away.wins++; away.points += 2; home.losses++; }
+}
+
+/** Standings sorted by points then NRR. */
+export function standingsTable(state: TournamentState): StandingRow[] {
+  return Object.values(state.standings).sort(
+    (a, b) => b.points - a.points || netRunRate(b) - netRunRate(a) || b.wins - a.wins,
+  );
 }
 
 function statKey(name: string) { return name; }
@@ -184,9 +240,11 @@ export function advanceTournament(prev: TournamentState): TournamentState {
     results: [...prev.results],
     aiResults: [...prev.aiResults],
     playerStats: { ...prev.playerStats },
+    standings: { ...prev.standings },
   };
   // Clone the agg entries too so downstream reference equality works
   for (const k of Object.keys(state.playerStats)) state.playerStats[k] = { ...state.playerStats[k] };
+  for (const k of Object.keys(state.standings)) state.standings[k] = { ...state.standings[k] };
 
   let i = state.currentIndex;
   // Skip Franchise Qualifier 2 if we won Qualifier 1
@@ -221,13 +279,24 @@ export function advanceTournament(prev: TournamentState): TournamentState {
   }
   state.results.push(r);
   accumulate(state.playerStats, r, true);
+  if (state.mode !== "TEST") recordStanding(state.standings, r as LimitedScorecard, true);
 
-  // AI-vs-AI stat sim (limited only to keep it snappy)
-  if (state.mode !== "TEST" && fixture.aiA && fixture.aiB && fixture.aiA.name !== fixture.aiB.name) {
-    const aiRng = childRng(mulberry32(state.aiSeed + i * 3527));
-    const aiR = simulateLimitedMatch(fixture.aiA.name, fixture.aiA.players, fixture.aiB, state.mode, fixture.stage, aiRng, 0);
-    state.aiResults.push(aiR);
-    accumulate(state.playerStats, aiR, false);
+  // Background round: every other team in the field plays this matchday too, so
+  // the points table, NRR and stat leaders cover the whole tournament.
+  if (state.mode !== "TEST" && state.field.length >= 2) {
+    const field = state.field;
+    const half = Math.floor(field.length / 2);
+    for (let m = 0; m < half; m++) {
+      // Rotating pairings so the same two teams don't meet every round.
+      const a = field[m];
+      const b = field[(field.length - 1 - m + i) % field.length];
+      if (!a || !b || a.name === b.name) continue;
+      const aiRng = childRng(mulberry32(state.aiSeed + i * 3527 + m * 101));
+      const aiR = simulateLimitedMatch(a.name, a.players, b, state.mode, fixture.stage, aiRng, 0);
+      state.aiResults.push(aiR);
+      accumulate(state.playerStats, aiR, false);
+      recordStanding(state.standings, aiR, false);
+    }
   }
 
   // Elimination
