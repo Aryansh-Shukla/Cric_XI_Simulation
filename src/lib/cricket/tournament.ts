@@ -116,6 +116,8 @@ export interface TournamentState {
   /** Persistent AI field so the points table is the same teams all tournament. */
   field: Opponent[];
   standings: Record<string, StandingRow>;
+  /** League position at the moment the group phase ended (1-based). */
+  qualifiedRank?: number;
 }
 
 export function createTournament(
