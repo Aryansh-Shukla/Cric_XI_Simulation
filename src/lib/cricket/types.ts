@@ -147,6 +147,20 @@ export interface LimitedScorecard {
   highlights: string[];
   eliminated: boolean;     // true if this loss ends the run
   full?: FullInnings[];    // detailed batter/bowler lines (both teams, both innings)
+  /** Present only when the main match finished level and a Super Over decided it. */
+  superOver?: SuperOver;
+}
+
+export interface SuperOverSide {
+  teamName: string;
+  runs: number;
+  wickets: number;
+}
+export interface SuperOver {
+  ours: SuperOverSide;
+  opp: SuperOverSide;
+  winner: string;
+  weWon: boolean;
 }
 
 export interface TestScorecard {

@@ -116,6 +116,11 @@ export interface TournamentState {
   /** Persistent AI field so the points table is the same teams all tournament. */
   field: Opponent[];
   standings: Record<string, StandingRow>;
+  /** Table for the current group phase only (Super 8 does not inherit group points). */
+  phaseStandings: Record<string, StandingRow>;
+  phaseStage?: StageKind;
+  /** League position at the moment the group phase ended (1-based). */
+  qualifiedRank?: number;
 }
 
 export function createTournament(
@@ -155,6 +160,7 @@ export function createTournament(
     aiSeed: Math.floor(rng() * 1e9),
     field: mode === "TEST" ? [] : field,
     standings: {},
+    phaseStandings: {},
   };
 }
 
@@ -187,6 +193,47 @@ export function standingsTable(state: TournamentState): StandingRow[] {
   return Object.values(state.standings).sort(
     (a, b) => b.points - a.points || netRunRate(b) - netRunRate(a) || b.wins - a.wins,
   );
+}
+
+/** Stages that feed the points table. */
+const GROUP_STAGES: StageKind[] = ["League", "Group", "Super 8"];
+
+/** Our league position (1-based) in the current points table. */
+/** Table for the phase currently being played (falls back to the full table). */
+export function phaseTable(state: TournamentState): StandingRow[] {
+  const rows = Object.values(state.phaseStandings);
+  const source = rows.length ? rows : Object.values(state.standings);
+  return source.sort((a, b) => b.points - a.points || netRunRate(b) - netRunRate(a) || b.wins - a.wins);
+}
+
+/** Our position (1-based) in the table that decides qualification for this phase. */
+export function ourRank(state: TournamentState): number {
+  const table = phaseTable(state);
+  const idx = table.findIndex(r => r.isOurs);
+  return idx < 0 ? table.length + 1 : idx + 1;
+}
+
+/** How many teams survive the end of this group phase. */
+export function advanceCut(mode: GameMode, stage: StageKind): number {
+  if (mode === "FRANCHISE_T20") return 4;              // IPL: top 4 only
+  if (mode === "T20_WC" && stage === "Group") return 6; // groups → Super 8
+  return 4;                                             // → semi-finals
+}
+
+/**
+ * IPL bracket: 1st/2nd enter Qualifier 1, 3rd/4th enter the Eliminator.
+ * Qualifier 2 is dropped later if Qualifier 1 is won.
+ */
+function buildPlayoffPath(state: TournamentState, i: number, rank: number) {
+  const path: StageKind[] = rank <= 2
+    ? ["Qualifier 1", "Qualifier 2", "Final"]
+    : ["Eliminator", "Qualifier 2", "Final"];
+  const placeholder = state.fixtures[i].opponent;
+  state.fixtures = [
+    ...state.fixtures.slice(0, i + 1),
+    ...path.map(stage => ({ stage, opponent: placeholder })),
+  ];
+  state.stages = state.fixtures.map(f => f.stage);
 }
 
 /** Stats are per player PER TEAM — the same historical name can appear for
@@ -262,21 +309,14 @@ export function advanceTournament(prev: TournamentState): TournamentState {
     aiResults: [...prev.aiResults],
     playerStats: { ...prev.playerStats },
     standings: { ...prev.standings },
+    phaseStandings: { ...prev.phaseStandings },
   };
   // Clone the agg entries too so downstream reference equality works
   for (const k of Object.keys(state.playerStats)) state.playerStats[k] = { ...state.playerStats[k] };
   for (const k of Object.keys(state.standings)) state.standings[k] = { ...state.standings[k] };
+  for (const k of Object.keys(state.phaseStandings)) state.phaseStandings[k] = { ...state.phaseStandings[k] };
 
   let i = state.currentIndex;
-  // Skip Franchise Qualifier 2 if we won Qualifier 1
-  while (i < state.fixtures.length) {
-    const fixture = state.fixtures[i];
-    if (state.mode === "FRANCHISE_T20" && fixture.stage === "Qualifier 2") {
-      const q1 = state.results[state.results.length - 1];
-      if (q1 && "weWon" in q1 && q1.weWon) { i++; continue; }
-    }
-    break;
-  }
   if (i >= state.fixtures.length) {
     state.complete = true;
     state.currentIndex = i;
@@ -286,6 +326,11 @@ export function advanceTournament(prev: TournamentState): TournamentState {
   seedKnockoutFixture(state, i);
   const fixture = state.fixtures[i];
   state.finalStageReached = fixture.stage;
+  // A new group phase (e.g. Group → Super 8) starts from a clean table.
+  if (GROUP_STAGES.includes(fixture.stage) && state.phaseStage !== fixture.stage) {
+    state.phaseStandings = {};
+    state.phaseStage = fixture.stage;
+  }
   const matchRng = childRng(mulberry32(state.seed + i * 7919 + 13));
 
   // User match
@@ -301,11 +346,15 @@ export function advanceTournament(prev: TournamentState): TournamentState {
   }
   state.results.push(r);
   accumulate(state.playerStats, r, true);
-  if (state.mode !== "TEST") recordStanding(state.standings, r as LimitedScorecard, true);
+  // Only league/group fixtures feed the points table — knockouts are not league games.
+  if (state.mode !== "TEST" && GROUP_STAGES.includes(fixture.stage)) {
+    recordStanding(state.standings, r as LimitedScorecard, true);
+    recordStanding(state.phaseStandings, r as LimitedScorecard, true);
+  }
 
   // Background round: every other team in the field plays this matchday too, so
   // the points table, NRR and stat leaders cover the whole tournament.
-  if (state.mode !== "TEST" && state.field.length >= 2) {
+  if (state.mode !== "TEST" && state.field.length >= 2 && GROUP_STAGES.includes(fixture.stage)) {
     for (const [m, [a, b]] of roundRobinRound(state.field, i).entries()) {
       if (a.name === b.name) continue;
       // Skip the team that is busy playing us on this matchday.
@@ -315,10 +364,11 @@ export function advanceTournament(prev: TournamentState): TournamentState {
       state.aiResults.push(aiR);
       accumulate(state.playerStats, aiR, false);
       recordStanding(state.standings, aiR, false);
+      recordStanding(state.phaseStandings, aiR, false);
     }
   }
 
-  // Elimination
+  // Knockout elimination — a loss ends the run, except Qualifier 1 (second chance).
   if (state.mode !== "TEST" && !(r as LimitedScorecard).weWon) {
     const isKO = (KNOCKOUT_STAGES as string[]).includes(fixture.stage);
     const isQ1 = state.mode === "FRANCHISE_T20" && fixture.stage === "Qualifier 1";
@@ -328,21 +378,34 @@ export function advanceTournament(prev: TournamentState): TournamentState {
     }
   }
 
-  // League/group cutoff
-  const groupStages: StageKind[] = ["League", "Group", "Super 8"];
+  // Winning Qualifier 1 goes straight to the Final — drop Qualifier 2 from the bracket.
+  if (
+    state.mode === "FRANCHISE_T20" &&
+    fixture.stage === "Qualifier 1" &&
+    (r as LimitedScorecard).weWon &&
+    state.fixtures[i + 1]?.stage === "Qualifier 2"
+  ) {
+    state.fixtures.splice(i + 1, 1);
+    state.stages = state.fixtures.map(f => f.stage);
+  }
+
+  // Group/league qualification: derived purely from the points table (points, then NRR).
+  // The user's team is ranked by exactly the same rule as every AI team.
   const nextStage = state.fixtures[i + 1]?.stage;
   if (
     !state.eliminated &&
     state.mode !== "TEST" &&
-    groupStages.includes(fixture.stage) &&
-    (!nextStage || !groupStages.includes(nextStage))
+    GROUP_STAGES.includes(fixture.stage) &&
+    nextStage !== fixture.stage
   ) {
-    const groupResults = state.results.filter(x => "weWon" in x && groupStages.includes(x.stage));
-    const groupWins = groupResults.filter(x => "weWon" in x && (x as LimitedScorecard).weWon).length;
-    const needed = Math.ceil(groupResults.length / 2);
-    if (groupWins < needed) {
+    const rank = ourRank(state);
+    const cut = advanceCut(state.mode, fixture.stage);
+    state.qualifiedRank = rank;
+    if (rank > cut) {
       state.eliminated = true;
       state.eliminatedAt = fixture.stage;
+    } else if (state.mode === "FRANCHISE_T20") {
+      buildPlayoffPath(state, i, rank);
     }
   }
 
@@ -372,17 +435,29 @@ function finalize(state: TournamentState): TournamentState {
 /** Seeds a knockout fixture from the standings so playoffs follow real results. */
 function pickKnockoutOpponent(state: TournamentState, fixture: Fixture): Opponent | null {
   if (state.mode === "TEST" || !state.field.length) return null;
-  const ko: Record<string, number> = {
-    "Qualifier 1": 0, "Semi Final": 0, "Final": 1, "Qualifier 2": 2, "Eliminator": 2, "Quarter Final": 3,
-  };
-  const seed = ko[fixture.stage];
-  if (seed === undefined) return null;
-  const ranked = standingsTable(state)
+  if (!(KNOCKOUT_STAGES as string[]).includes(fixture.stage)) return null;
+  const ranked = phaseTable(state)
     .filter(r => !r.isOurs)
     .map(r => state.field.find(o => o.name === r.name))
     .filter((o): o is Opponent => Boolean(o));
   if (!ranked.length) return null;
-  return ranked[Math.min(seed, ranked.length - 1)];
+
+  const ours = state.qualifiedRank ?? ourRank(state);
+  // Convert a league position into an index in the non-user ranked list.
+  const at = (leaguePos: number) =>
+    ranked[Math.max(0, Math.min(ranked.length - 1, leaguePos - (leaguePos > ours ? 1 : 0) - 1))];
+
+  switch (fixture.stage) {
+    // Q1 is 1st v 2nd; the Eliminator is 3rd v 4th.
+    case "Qualifier 1":  return at(ours === 1 ? 2 : 1);
+    case "Eliminator":   return at(ours === 3 ? 4 : 3);
+    // Q2 is the Q1 loser against the Eliminator winner.
+    case "Qualifier 2":  return at(ours >= 3 ? (ours === 3 ? 2 : 1) : (ours === 1 ? 4 : 3));
+    case "Quarter Final": return at(Math.min(8, 9 - Math.min(ours, 8)));
+    case "Semi Final":   return at(5 - Math.min(ours, 4));   // 1v4, 2v3
+    case "Final":        return at(ours <= 2 ? (ours === 1 ? 2 : 1) : 1);
+    default:             return null;
+  }
 }
 
 function finalizeInner(state: TournamentState): TournamentState {
