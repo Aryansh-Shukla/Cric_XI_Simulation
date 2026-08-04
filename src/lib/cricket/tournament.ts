@@ -309,10 +309,12 @@ export function advanceTournament(prev: TournamentState): TournamentState {
     aiResults: [...prev.aiResults],
     playerStats: { ...prev.playerStats },
     standings: { ...prev.standings },
+    phaseStandings: { ...prev.phaseStandings },
   };
   // Clone the agg entries too so downstream reference equality works
   for (const k of Object.keys(state.playerStats)) state.playerStats[k] = { ...state.playerStats[k] };
   for (const k of Object.keys(state.standings)) state.standings[k] = { ...state.standings[k] };
+  for (const k of Object.keys(state.phaseStandings)) state.phaseStandings[k] = { ...state.phaseStandings[k] };
 
   let i = state.currentIndex;
   if (i >= state.fixtures.length) {
@@ -324,6 +326,11 @@ export function advanceTournament(prev: TournamentState): TournamentState {
   seedKnockoutFixture(state, i);
   const fixture = state.fixtures[i];
   state.finalStageReached = fixture.stage;
+  // A new group phase (e.g. Group → Super 8) starts from a clean table.
+  if (GROUP_STAGES.includes(fixture.stage) && state.phaseStage !== fixture.stage) {
+    state.phaseStandings = {};
+    state.phaseStage = fixture.stage;
+  }
   const matchRng = childRng(mulberry32(state.seed + i * 7919 + 13));
 
   // User match
@@ -342,6 +349,7 @@ export function advanceTournament(prev: TournamentState): TournamentState {
   // Only league/group fixtures feed the points table — knockouts are not league games.
   if (state.mode !== "TEST" && GROUP_STAGES.includes(fixture.stage)) {
     recordStanding(state.standings, r as LimitedScorecard, true);
+    recordStanding(state.phaseStandings, r as LimitedScorecard, true);
   }
 
   // Background round: every other team in the field plays this matchday too, so
@@ -356,6 +364,7 @@ export function advanceTournament(prev: TournamentState): TournamentState {
       state.aiResults.push(aiR);
       accumulate(state.playerStats, aiR, false);
       recordStanding(state.standings, aiR, false);
+      recordStanding(state.phaseStandings, aiR, false);
     }
   }
 
