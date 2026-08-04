@@ -436,7 +436,7 @@ function finalize(state: TournamentState): TournamentState {
 function pickKnockoutOpponent(state: TournamentState, fixture: Fixture): Opponent | null {
   if (state.mode === "TEST" || !state.field.length) return null;
   if (!(KNOCKOUT_STAGES as string[]).includes(fixture.stage)) return null;
-  const ranked = standingsTable(state)
+  const ranked = phaseTable(state)
     .filter(r => !r.isOurs)
     .map(r => state.field.find(o => o.name === r.name))
     .filter((o): o is Opponent => Boolean(o));
