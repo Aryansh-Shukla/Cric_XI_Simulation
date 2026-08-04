@@ -1,4 +1,4 @@
-import type { Player, Pitch, Weather, Innings, LimitedScorecard, StageKind, GameMode, FullInnings } from "../types";
+import type { Player, Pitch, Weather, Innings, LimitedScorecard, StageKind, GameMode, FullInnings, SuperOver } from "../types";
 import { KNOCKOUT_STAGES } from "../types";
 import { attrs, battingOrder, bowlingPool, wicketkeeper } from "./attributes";
 import { clamp, pick, Rng, weightedPick } from "./rng";
@@ -567,13 +567,74 @@ export interface Opponent {
 
 const PITCHES: Pitch[] = ["Green", "Flat", "Dusty", "Turning", "Slow"];
 const WEATHERS: Weather[] = ["Sunny", "Cloudy", "Humid", "Night Match"];
-const VENUES = [
+
+/** Global (international) venue pool — used by ICC events. */
+const INTERNATIONAL_VENUES = [
   "Wankhede, Mumbai", "Eden Gardens, Kolkata", "MCG, Melbourne",
   "Lord's, London", "SCG, Sydney", "Newlands, Cape Town",
-  "Chinnaswamy, Bangalore", "Gaddafi, Lahore", "R. Premadasa, Colombo",
+  "Chinnaswamy, Bengaluru", "Gaddafi, Lahore", "R. Premadasa, Colombo",
   "Kensington Oval, Bridgetown", "Basin Reserve, Wellington",
   "Trent Bridge, Nottingham", "Adelaide Oval",
 ];
+
+/**
+ * The IPL has only ever been hosted in India, South Africa (2009) and the
+ * UAE (2014 part, 2020, 2021 part) — no English or Australian grounds.
+ */
+const FRANCHISE_VENUES = [
+  // India
+  "Wankhede, Mumbai", "Eden Gardens, Kolkata", "M. A. Chidambaram, Chennai",
+  "Narendra Modi Stadium, Ahmedabad", "M. Chinnaswamy, Bengaluru",
+  "Arun Jaitley Stadium, Delhi", "Rajiv Gandhi Stadium, Hyderabad",
+  "Sawai Mansingh, Jaipur", "PCA Stadium, Mohali", "Ekana Stadium, Lucknow",
+  // South Africa
+  "The Wanderers, Johannesburg", "Kingsmead, Durban", "Newlands, Cape Town",
+  "SuperSport Park, Centurion",
+  // UAE
+  "Dubai International Stadium", "Sheikh Zayed Stadium, Abu Dhabi",
+  "Sharjah Cricket Stadium",
+];
+
+export function venuePool(mode: GameMode): string[] {
+  return mode === "FRANCHISE_T20" ? FRANCHISE_VENUES : INTERNATIONAL_VENUES;
+}
+
+/** Six legal deliveries a side, two wickets and you're done. Decided, never tied. */
+function simulateSuperOver(
+  ourName: string, ourPlayers: Player[],
+  oppName: string, oppPlayers: Player[],
+  rng: Rng,
+): SuperOver {
+  const strength = (ps: Player[]) => {
+    const top = [...ps].sort((a, b) => b.stats.batting - a.stats.batting).slice(0, 3);
+    return top.reduce((s, p) => s + p.stats.batting, 0) / (top.length || 1);
+  };
+  const sideScore = (ps: Player[]) => {
+    const base = 6 + (strength(ps) - 70) / 6;
+    let runs = 0, wickets = 0;
+    for (let b = 0; b < 6 && wickets < 2; b++) {
+      const roll = rng();
+      if (roll < 0.12) { wickets++; continue; }
+      runs += Math.max(0, Math.round(base / 6 + (rng() * 5 - 1.4)));
+    }
+    return { runs, wickets };
+  };
+  let ours = sideScore(ourPlayers);
+  let opp = sideScore(oppPlayers);
+  let guard = 0;
+  while (ours.runs === opp.runs && guard++ < 20) {
+    ours = sideScore(ourPlayers);
+    opp = sideScore(oppPlayers);
+  }
+  if (ours.runs === opp.runs) ours = { ...ours, runs: ours.runs + 1 };
+  const weWon = ours.runs > opp.runs;
+  return {
+    ours: { teamName: ourName, runs: ours.runs, wickets: ours.wickets },
+    opp: { teamName: oppName, runs: opp.runs, wickets: opp.wickets },
+    winner: weWon ? ourName : oppName,
+    weWon,
+  };
+}
 
 export function simulateLimitedMatch(
   ourName: string,
@@ -587,7 +648,7 @@ export function simulateLimitedMatch(
   const format: Format = mode === "T20_WC" || mode === "FRANCHISE_T20" ? "T20" : "ODI";
   const pitch = pick(PITCHES, rng);
   const weather = pick(WEATHERS, rng);
-  const venue = pick(VENUES, rng);
+  const venue = pick(venuePool(mode), rng);
   const toss = decideToss(pitch, weather, format, rng);
 
   const weBattedFirst =
@@ -616,18 +677,16 @@ export function simulateLimitedMatch(
   const ourInn = summariseInnings(ourState);
   const oppInn = summariseInnings(oppState);
 
-  let weWon: boolean;
-  if (ourInn.runs === oppInn.runs) {
-    // Tied match → super over abstraction — decide winner by weighted skill
-    weWon = rng() < 0.5;
-  } else {
-    weWon = ourInn.runs > oppInn.runs;
-  }
-  const marginText = ourInn.runs === oppInn.runs
-    ? `${weWon ? "won" : "lost"} the Super Over`
+  const tied = ourInn.runs === oppInn.runs;
+  const superOver = tied
+    ? simulateSuperOver(ourName, ourPlayers, opp.name, opp.players, rng)
+    : undefined;
+  const weWon = superOver ? superOver.weWon : ourInn.runs > oppInn.runs;
+  const marginText = superOver
+    ? `${weWon ? "won" : "lost"} the Super Over (${superOver.ours.runs}/${superOver.ours.wickets} v ${superOver.opp.runs}/${superOver.opp.wickets})`
     : limitedMargin(weWon, weBattedFirst, ourInn, oppInn);
-  const resultLine = ourInn.runs === oppInn.runs
-    ? `${weWon ? ourName : opp.name} won the Super Over`
+  const resultLine = superOver
+    ? `Match tied · ${superOver.winner} won the Super Over ${superOver.weWon ? superOver.ours.runs : superOver.opp.runs}/${superOver.weWon ? superOver.ours.wickets : superOver.opp.wickets} to ${superOver.weWon ? superOver.opp.runs : superOver.ours.runs}/${superOver.weWon ? superOver.opp.wickets : superOver.ours.wickets}`
     : `${weWon ? ourName : opp.name} ${marginText.replace(/^won|lost/, "won")}`;
 
   const winnerState = weWon ? ourState : oppState;
@@ -653,6 +712,7 @@ export function simulateLimitedMatch(
     resultLine,
     playerOfMatch: pom,
     highlights: [],
+    superOver,
     eliminated: !weWon && (KNOCKOUT_STAGES as string[]).includes(stage),
   };
   const firstState = weBattedFirst ? ourState : oppState;
