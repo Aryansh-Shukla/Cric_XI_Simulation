@@ -422,6 +422,25 @@ function StageTimeline({ state }: { state: TournamentState }) {
 }
 
 function LimitedCard({ r, onView }: { r: LimitedScorecard; onView: () => void }) {
+  return <LimitedCardInner r={r} onView={onView} />;
+}
+
+/** Super Over breakdown — shown wherever a tied match is reported. */
+function SuperOverStrip({ r }: { r: LimitedScorecard }) {
+  const so = r.superOver!;
+  return (
+    <div className="border-t border-[color:var(--gold)]/30 bg-[color:var(--gold)]/5 px-5 py-3">
+      <div className="text-[10px] uppercase tracking-widest text-gold">Match tied · Super Over</div>
+      <div className="mt-1 flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
+        <span>{so.ours.teamName} <span className="font-bold">{so.ours.runs}/{so.ours.wickets}</span></span>
+        <span>{so.opp.teamName} <span className="font-bold">{so.opp.runs}/{so.opp.wickets}</span></span>
+        <span className="text-gold">{so.winner} won the Super Over</span>
+      </div>
+    </div>
+  );
+}
+
+function LimitedCardInner({ r, onView }: { r: LimitedScorecard; onView: () => void }) {
   const WIcon = weatherIcon(r.weather);
   const ringClass = r.weWon ? "ring-1 ring-[color:var(--accent)]/40" : "ring-1 ring-[color:var(--destructive)]/40";
   const tossText = `${r.toss.winner === "us" ? r.ourName : r.oppName} won toss · chose to ${r.toss.decision}`;
