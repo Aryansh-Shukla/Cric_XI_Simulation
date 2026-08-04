@@ -453,6 +453,8 @@ function LimitedCard({ r, onView }: { r: LimitedScorecard; onView: () => void })
         <InningsBlock title={r.oppName} innings={r.oppInnings} highlight={!r.weWon} align="right" />
       </div>
 
+      {r.superOver && <SuperOverStrip r={r} />}
+
       <div className="border-t border-[color:var(--border)] px-5 py-3 text-xs text-muted-foreground">
         {tossText}
       </div>
