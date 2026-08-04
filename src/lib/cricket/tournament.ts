@@ -160,6 +160,7 @@ export function createTournament(
     aiSeed: Math.floor(rng() * 1e9),
     field: mode === "TEST" ? [] : field,
     standings: {},
+    phaseStandings: {},
   };
 }
 
@@ -198,8 +199,16 @@ export function standingsTable(state: TournamentState): StandingRow[] {
 const GROUP_STAGES: StageKind[] = ["League", "Group", "Super 8"];
 
 /** Our league position (1-based) in the current points table. */
+/** Table for the phase currently being played (falls back to the full table). */
+export function phaseTable(state: TournamentState): StandingRow[] {
+  const rows = Object.values(state.phaseStandings);
+  const source = rows.length ? rows : Object.values(state.standings);
+  return source.sort((a, b) => b.points - a.points || netRunRate(b) - netRunRate(a) || b.wins - a.wins);
+}
+
+/** Our position (1-based) in the table that decides qualification for this phase. */
 export function ourRank(state: TournamentState): number {
-  const table = standingsTable(state);
+  const table = phaseTable(state);
   const idx = table.findIndex(r => r.isOurs);
   return idx < 0 ? table.length + 1 : idx + 1;
 }
