@@ -738,7 +738,7 @@ function validateLimited(r: LimitedScorecard) {
   }
   const winnerRuns = r.weWon ? r.ourInnings.runs : r.oppInnings.runs;
   const loserRuns = r.weWon ? r.oppInnings.runs : r.ourInnings.runs;
-  if (winnerRuns < loserRuns) {
+  if (!r.superOver && winnerRuns < loserRuns) {
     console.warn("[sim] winner has fewer runs than loser", r);
   }
   const maxBowlOvers = r.format === "T20" ? 4 : 10;
