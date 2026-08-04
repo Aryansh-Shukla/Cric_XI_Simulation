@@ -718,6 +718,11 @@ export function simulateLimitedMatch(
   const firstState = weBattedFirst ? ourState : oppState;
   const secondState = weBattedFirst ? oppState : ourState;
   scorecard.highlights = limitedCommentaryFromEvents(scorecard, firstState, secondState, rng);
+  if (superOver) {
+    scorecard.highlights.unshift(
+      `Scores level after 20 overs — Super Over: ${superOver.ours.teamName} ${superOver.ours.runs}/${superOver.ours.wickets}, ${superOver.opp.teamName} ${superOver.opp.runs}/${superOver.opp.wickets}. ${superOver.winner} won it.`,
+    );
+  }
   scorecard.full = [
     toFullInnings(firstState, "1st Innings"),
     toFullInnings(secondState, "2nd Innings"),
