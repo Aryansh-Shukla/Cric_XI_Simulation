@@ -270,15 +270,6 @@ export function advanceTournament(prev: TournamentState): TournamentState {
   for (const k of Object.keys(state.standings)) state.standings[k] = { ...state.standings[k] };
 
   let i = state.currentIndex;
-  // Skip Franchise Qualifier 2 if we won Qualifier 1
-  while (i < state.fixtures.length) {
-    const fixture = state.fixtures[i];
-    if (state.mode === "FRANCHISE_T20" && fixture.stage === "Qualifier 2") {
-      const q1 = state.results[state.results.length - 1];
-      if (q1 && "weWon" in q1 && q1.weWon) { i++; continue; }
-    }
-    break;
-  }
   if (i >= state.fixtures.length) {
     state.complete = true;
     state.currentIndex = i;
@@ -303,11 +294,14 @@ export function advanceTournament(prev: TournamentState): TournamentState {
   }
   state.results.push(r);
   accumulate(state.playerStats, r, true);
-  if (state.mode !== "TEST") recordStanding(state.standings, r as LimitedScorecard, true);
+  // Only league/group fixtures feed the points table — knockouts are not league games.
+  if (state.mode !== "TEST" && GROUP_STAGES.includes(fixture.stage)) {
+    recordStanding(state.standings, r as LimitedScorecard, true);
+  }
 
   // Background round: every other team in the field plays this matchday too, so
   // the points table, NRR and stat leaders cover the whole tournament.
-  if (state.mode !== "TEST" && state.field.length >= 2) {
+  if (state.mode !== "TEST" && state.field.length >= 2 && GROUP_STAGES.includes(fixture.stage)) {
     for (const [m, [a, b]] of roundRobinRound(state.field, i).entries()) {
       if (a.name === b.name) continue;
       // Skip the team that is busy playing us on this matchday.
@@ -320,7 +314,7 @@ export function advanceTournament(prev: TournamentState): TournamentState {
     }
   }
 
-  // Elimination
+  // Knockout elimination — a loss ends the run, except Qualifier 1 (second chance).
   if (state.mode !== "TEST" && !(r as LimitedScorecard).weWon) {
     const isKO = (KNOCKOUT_STAGES as string[]).includes(fixture.stage);
     const isQ1 = state.mode === "FRANCHISE_T20" && fixture.stage === "Qualifier 1";
@@ -330,21 +324,34 @@ export function advanceTournament(prev: TournamentState): TournamentState {
     }
   }
 
-  // League/group cutoff
-  const groupStages: StageKind[] = ["League", "Group", "Super 8"];
+  // Winning Qualifier 1 goes straight to the Final — drop Qualifier 2 from the bracket.
+  if (
+    state.mode === "FRANCHISE_T20" &&
+    fixture.stage === "Qualifier 1" &&
+    (r as LimitedScorecard).weWon &&
+    state.fixtures[i + 1]?.stage === "Qualifier 2"
+  ) {
+    state.fixtures.splice(i + 1, 1);
+    state.stages = state.fixtures.map(f => f.stage);
+  }
+
+  // Group/league qualification: derived purely from the points table (points, then NRR).
+  // The user's team is ranked by exactly the same rule as every AI team.
   const nextStage = state.fixtures[i + 1]?.stage;
   if (
     !state.eliminated &&
     state.mode !== "TEST" &&
-    groupStages.includes(fixture.stage) &&
-    (!nextStage || !groupStages.includes(nextStage))
+    GROUP_STAGES.includes(fixture.stage) &&
+    nextStage !== fixture.stage
   ) {
-    const groupResults = state.results.filter(x => "weWon" in x && groupStages.includes(x.stage));
-    const groupWins = groupResults.filter(x => "weWon" in x && (x as LimitedScorecard).weWon).length;
-    const needed = Math.ceil(groupResults.length / 2);
-    if (groupWins < needed) {
+    const rank = ourRank(state);
+    const cut = advanceCut(state.mode, fixture.stage);
+    state.qualifiedRank = rank;
+    if (rank > cut) {
       state.eliminated = true;
       state.eliminatedAt = fixture.stage;
+    } else if (state.mode === "FRANCHISE_T20") {
+      buildPlayoffPath(state, i, rank);
     }
   }
 
