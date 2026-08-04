@@ -393,9 +393,12 @@ function StandingsPanel({ state }: { state: TournamentState }) {
 
 /* ---------- Match cards ---------- */
 function StageTimeline({ state }: { state: TournamentState }) {
+  // Drive the timeline from the live bracket, not the provisional stage list —
+  // e.g. winning Qualifier 1 removes Qualifier 2 and shows the Final next.
+  const stages = state.fixtures.map(f => f.stage);
   return (
     <div className="mt-6 flex flex-wrap gap-1.5">
-      {state.stages.map((s, i) => {
+      {stages.map((s, i) => {
         const r = state.results[i];
         const played = i < state.results.length && r;
         const outcome = played
