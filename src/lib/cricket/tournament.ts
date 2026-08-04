@@ -414,17 +414,29 @@ function finalize(state: TournamentState): TournamentState {
 /** Seeds a knockout fixture from the standings so playoffs follow real results. */
 function pickKnockoutOpponent(state: TournamentState, fixture: Fixture): Opponent | null {
   if (state.mode === "TEST" || !state.field.length) return null;
-  const ko: Record<string, number> = {
-    "Qualifier 1": 0, "Semi Final": 0, "Final": 1, "Qualifier 2": 2, "Eliminator": 2, "Quarter Final": 3,
-  };
-  const seed = ko[fixture.stage];
-  if (seed === undefined) return null;
+  if (!(KNOCKOUT_STAGES as string[]).includes(fixture.stage)) return null;
   const ranked = standingsTable(state)
     .filter(r => !r.isOurs)
     .map(r => state.field.find(o => o.name === r.name))
     .filter((o): o is Opponent => Boolean(o));
   if (!ranked.length) return null;
-  return ranked[Math.min(seed, ranked.length - 1)];
+
+  const ours = state.qualifiedRank ?? ourRank(state);
+  // Convert a league position into an index in the non-user ranked list.
+  const at = (leaguePos: number) =>
+    ranked[Math.max(0, Math.min(ranked.length - 1, leaguePos - (leaguePos > ours ? 1 : 0) - 1))];
+
+  switch (fixture.stage) {
+    // Q1 is 1st v 2nd; the Eliminator is 3rd v 4th.
+    case "Qualifier 1":  return at(ours === 1 ? 2 : 1);
+    case "Eliminator":   return at(ours === 3 ? 4 : 3);
+    // Q2 is the Q1 loser against the Eliminator winner.
+    case "Qualifier 2":  return at(ours >= 3 ? (ours === 3 ? 2 : 1) : (ours === 1 ? 4 : 3));
+    case "Quarter Final": return at(Math.min(8, 9 - Math.min(ours, 8)));
+    case "Semi Final":   return at(5 - Math.min(ours, 4));   // 1v4, 2v3
+    case "Final":        return at(ours <= 2 ? (ours === 1 ? 2 : 1) : 1);
+    default:             return null;
+  }
 }
 
 function finalizeInner(state: TournamentState): TournamentState {
