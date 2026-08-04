@@ -36,6 +36,22 @@ export function ScorecardModal({ result, onClose }: Props) {
               </button>
             </div>
             <div className="space-y-6 p-5">
+              {"superOver" in result && result.superOver && (
+                <div className="rounded-xl border border-[color:var(--gold)]/40 bg-[color:var(--gold)]/5 p-4">
+                  <div className="text-xs uppercase tracking-widest text-gold">Super Over</div>
+                  <div className="mt-2 grid gap-1 text-sm">
+                    <div className="flex justify-between">
+                      <span>{result.superOver.ours.teamName}</span>
+                      <span className="font-bold">{result.superOver.ours.runs}/{result.superOver.ours.wickets}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>{result.superOver.opp.teamName}</span>
+                      <span className="font-bold">{result.superOver.opp.runs}/{result.superOver.opp.wickets}</span>
+                    </div>
+                    <div className="mt-1 text-xs text-gold">{result.superOver.winner} won the Super Over</div>
+                  </div>
+                </div>
+              )}
               {(result.full ?? []).map((inn, i) => (
                 <InningsTable key={i} inn={inn} />
               ))}
