@@ -191,6 +191,39 @@ export function standingsTable(state: TournamentState): StandingRow[] {
   );
 }
 
+/** Stages that feed the points table. */
+const GROUP_STAGES: StageKind[] = ["League", "Group", "Super 8"];
+
+/** Our league position (1-based) in the current points table. */
+export function ourRank(state: TournamentState): number {
+  const table = standingsTable(state);
+  const idx = table.findIndex(r => r.isOurs);
+  return idx < 0 ? table.length + 1 : idx + 1;
+}
+
+/** How many teams survive the end of this group phase. */
+export function advanceCut(mode: GameMode, stage: StageKind): number {
+  if (mode === "FRANCHISE_T20") return 4;              // IPL: top 4 only
+  if (mode === "T20_WC" && stage === "Group") return 6; // groups → Super 8
+  return 4;                                             // → semi-finals
+}
+
+/**
+ * IPL bracket: 1st/2nd enter Qualifier 1, 3rd/4th enter the Eliminator.
+ * Qualifier 2 is dropped later if Qualifier 1 is won.
+ */
+function buildPlayoffPath(state: TournamentState, i: number, rank: number) {
+  const path: StageKind[] = rank <= 2
+    ? ["Qualifier 1", "Qualifier 2", "Final"]
+    : ["Eliminator", "Qualifier 2", "Final"];
+  const placeholder = state.fixtures[i].opponent;
+  state.fixtures = [
+    ...state.fixtures.slice(0, i + 1),
+    ...path.map(stage => ({ stage, opponent: placeholder })),
+  ];
+  state.stages = state.fixtures.map(f => f.stage);
+}
+
 /** Stats are per player PER TEAM — the same historical name can appear for
  *  our XI and for an AI squad in the same tournament. */
 function statKey(name: string, team: string) { return `${team}::${name}`; }
