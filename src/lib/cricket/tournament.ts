@@ -116,6 +116,9 @@ export interface TournamentState {
   /** Persistent AI field so the points table is the same teams all tournament. */
   field: Opponent[];
   standings: Record<string, StandingRow>;
+  /** Table for the current group phase only (Super 8 does not inherit group points). */
+  phaseStandings: Record<string, StandingRow>;
+  phaseStage?: StageKind;
   /** League position at the moment the group phase ended (1-based). */
   qualifiedRank?: number;
 }
