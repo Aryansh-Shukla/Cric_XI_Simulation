@@ -179,11 +179,16 @@ function ensureRow(store: Record<string, StandingRow>, name: string, isOurs: boo
 function recordStanding(store: Record<string, StandingRow>, r: LimitedScorecard, ourIsUser: boolean) {
   const home = ensureRow(store, r.ourName, ourIsUser);
   const away = ensureRow(store, r.oppName, false);
+  // NRR uses the full quota whenever a side is bowled out, exactly like the
+  // official rule — otherwise skittling a team cheaply would *hurt* the winner.
+  const maxOvers = r.format === "T20" ? 20 : 50;
+  const ourOvers = nrrOvers(r.ourInnings, maxOvers);
+  const oppOvers = nrrOvers(r.oppInnings, maxOvers);
   home.played++; away.played++;
-  home.runsFor += r.ourInnings.runs; home.oversFor += r.ourInnings.overs;
-  home.runsAgainst += r.oppInnings.runs; home.oversAgainst += r.oppInnings.overs;
-  away.runsFor += r.oppInnings.runs; away.oversFor += r.oppInnings.overs;
-  away.runsAgainst += r.ourInnings.runs; away.oversAgainst += r.ourInnings.overs;
+  home.runsFor += r.ourInnings.runs; home.oversFor += ourOvers;
+  home.runsAgainst += r.oppInnings.runs; home.oversAgainst += oppOvers;
+  away.runsFor += r.oppInnings.runs; away.oversFor += oppOvers;
+  away.runsAgainst += r.ourInnings.runs; away.oversAgainst += ourOvers;
   if (r.weWon) { home.wins++; home.points += 2; away.losses++; }
   else { away.wins++; away.points += 2; home.losses++; }
 }
