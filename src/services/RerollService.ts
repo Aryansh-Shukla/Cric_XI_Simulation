@@ -15,15 +15,17 @@ function historicalContext(squad: Squad) {
   };
 }
 
-/** Legacy (uncatalogued) modes such as Test: never leave the player with a dead button. */
+/**
+ * Legacy (uncatalogued) modes such as Test. The reroll invariant is never broken:
+ * only squads that satisfy `preferred` are ever returned. If the exclusion list
+ * empties the set we relax the exclusions (but not the invariant) before giving up.
+ */
 function legacyFallback(current: Squad, mode: GameMode, exclude: string[], preferred: (s: Squad) => boolean): Squad[] {
   const pool = DraftPoolService.getPool(mode);
   const avoid = new Set([current.id, ...exclude]);
-  const others = pool.filter(s => !avoid.has(s.id));
-  const matching = others.filter(preferred);
-  if (matching.length) return matching;
-  // No exact match in the legacy seed data — shuffle to any other available squad.
-  return others.length ? others : pool.filter(s => s.id !== current.id);
+  const eligible = pool.filter(s => s.id !== current.id && preferred(s));
+  const fresh = eligible.filter(s => !avoid.has(s.id));
+  return fresh.length ? fresh : eligible;
 }
 
 /**
@@ -37,9 +39,14 @@ export const RerollService = {
     if (!ctx) {
       return legacyFallback(current, mode, excludeSquadIds, s => s.country === current.country);
     }
-    return SquadRepository
-      .getAlternateYearsForTeam(ctx.competitionId, ctx.teamId, [current.id, ...excludeSquadIds])
-      .map(s => squadToLegacy(s, mode));
+    const alternates = SquadRepository
+      .getAlternateYearsForTeam(ctx.competitionId, ctx.teamId, [current.id])
+      .map(s => squadToLegacy(s, mode))
+      // Invariant: the team must stay identical, only the edition may change.
+      .filter(s => s.competitionId === current.competitionId && s.editionId !== current.editionId);
+    const excluded = new Set(excludeSquadIds);
+    const fresh = alternates.filter(s => !excluded.has(s.id));
+    return fresh.length ? fresh : alternates;
   },
 
   /** A different participant of the exact same edition. */
@@ -48,8 +55,13 @@ export const RerollService = {
     if (!ctx) {
       return legacyFallback(current, mode, excludeSquadIds, s => s.year === current.year);
     }
-    return SquadRepository
-      .getOtherTeamsInEdition(ctx.competitionId, ctx.editionId, [current.id, ...excludeSquadIds])
-      .map(s => squadToLegacy(s, mode));
+    const alternates = SquadRepository
+      .getOtherTeamsInEdition(ctx.competitionId, ctx.editionId, [current.id])
+      .map(s => squadToLegacy(s, mode))
+      // Invariant: the edition must stay identical, only the team may change.
+      .filter(s => s.editionId === current.editionId && s.teamId !== current.teamId);
+    const excluded = new Set(excludeSquadIds);
+    const fresh = alternates.filter(s => !excluded.has(s.id));
+    return fresh.length ? fresh : alternates;
   },
 };
