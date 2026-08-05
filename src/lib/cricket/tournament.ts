@@ -243,7 +243,7 @@ function statKey(name: string, team: string) { return `${team}::${name}`; }
 function ensureAgg(store: Record<string, PlayerAgg>, name: string, team: string, isOurs: boolean): PlayerAgg {
   const k = statKey(name, team);
   if (!store[k]) {
-    store[k] = { name, team, matches: 0, runs: 0, balls: 0, fours: 0, sixes: 0, wickets: 0, ballsBowled: 0, runsConceded: 0, isOurs };
+    store[k] = { name, team, matches: 0, runs: 0, balls: 0, outs: 0, fours: 0, sixes: 0, wickets: 0, ballsBowled: 0, runsConceded: 0, isOurs };
   }
   // Ownership can be discovered later (a player may first appear as a bowler).
   if (isOurs) store[k].isOurs = true;
@@ -266,6 +266,7 @@ function accumulate(store: Record<string, PlayerAgg>, r: MatchResult, isOurs: bo
       const a = ensureAgg(store, b.name, team, teamIsOurs);
       a.runs += b.runs;
       a.balls += b.balls;
+      if (b.out) a.outs += 1;
       a.fours += b.fours;
       a.sixes += b.sixes;
       seen.add(statKey(b.name, team));
