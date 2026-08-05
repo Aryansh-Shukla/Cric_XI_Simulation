@@ -193,6 +193,7 @@ export interface PlayerAgg {
   matches: number;
   runs: number;
   balls: number;
+  outs: number;
   fours: number;
   sixes: number;
   wickets: number;
