@@ -73,6 +73,23 @@ export function netRunRate(r: StandingRow): number {
 }
 
 /**
+ * Overs faced for NRR purposes. Cricket "overs" are 49.3 = 49 overs 3 balls, so
+ * convert to true decimal, and count the full quota when a side is bowled out.
+ */
+function nrrOvers(inn: Innings, maxOvers: number): number {
+  if (inn.wickets >= 10) return maxOvers;
+  const whole = Math.floor(inn.overs);
+  const balls = Math.round((inn.overs - whole) * 10);
+  return Math.min(maxOvers, whole + balls / 6);
+}
+
+function legacyNetRunRate(r: StandingRow): number {
+  const forRate = r.oversFor > 0 ? r.runsFor / r.oversFor : 0;
+  const againstRate = r.oversAgainst > 0 ? r.runsAgainst / r.oversAgainst : 0;
+  return Math.round((forRate - againstRate) * 1000) / 1000;
+}
+
+/**
  * Circle-method round robin: every field team plays exactly once per matchday,
  * so the points table stays even across the tournament.
  */
