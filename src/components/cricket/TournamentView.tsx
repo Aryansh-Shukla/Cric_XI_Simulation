@@ -271,6 +271,50 @@ function FinaleCard({ state, mode, onRestart }: { state: TournamentState; mode: 
 }
 
 /* ---------- Leaders / Standings ---------- */
+function CampaignAwards({ state }: { state: TournamentState }) {
+  const { batter, bowler } = useMemo(() => campaignAwards(state), [state]);
+  if (!batter && !bowler) return null;
+  const rankLabel = (rank: number) => (rank === 1 ? `Rank #1 🏆` : `Rank #${rank}`);
+  return (
+    <div className="mt-6 grid gap-3 text-left sm:grid-cols-2">
+      <div className="rounded-2xl border border-[color:var(--border)] bg-white/[0.03] p-4">
+        <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Best Batter</div>
+        {batter ? (
+          <>
+            <div className="mt-1 text-base font-semibold text-gold">{batter.name}</div>
+            <div className="mt-1 text-xs text-muted-foreground">
+              {batter.runs} runs · Avg {batter.average} · SR {batter.strikeRate}
+            </div>
+            <div className="mt-1 text-xs font-medium">{rankLabel(batter.rank)} <span className="text-muted-foreground">in Most Runs</span></div>
+          </>
+        ) : (
+          <div className="mt-1 text-xs text-muted-foreground">No runs recorded.</div>
+        )}
+      </div>
+      <div className="rounded-2xl border border-[color:var(--border)] bg-white/[0.03] p-4">
+        <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Best Bowler</div>
+        {bowler ? (
+          <>
+            <div className="mt-1 text-base font-semibold text-gold">{bowler.name}</div>
+            <div className="mt-1 text-xs text-muted-foreground">
+              {bowler.wickets} wickets · Econ {bowler.economy}
+            </div>
+            <div className="mt-1 text-xs font-medium">{rankLabel(bowler.rank)} <span className="text-muted-foreground">in Most Wickets</span></div>
+          </>
+        ) : (
+          <div className="mt-1 text-xs text-muted-foreground">No wickets recorded.</div>
+        )}
+      </div>
+      <div className="rounded-2xl border border-[color:var(--border)] bg-white/[0.03] p-4 sm:col-span-2">
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-muted-foreground">Team Rating</span>
+          <span className="font-semibold text-foreground">{state.teamRatingSnapshot}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function LeadersPanel({ runScorers, wicketTakers }: { runScorers: PlayerAgg[]; wicketTakers: PlayerAgg[] }) {
   return (
     <div className="grid gap-4 md:grid-cols-2">
