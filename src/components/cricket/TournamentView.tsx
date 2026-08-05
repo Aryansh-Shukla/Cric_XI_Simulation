@@ -9,7 +9,7 @@ import type {
 } from "@/lib/cricket/types";
 import {
   createTournament, advanceTournament, topRunScorers, topWicketTakers,
-  standingsTable, netRunRate,
+  standingsTable, netRunRate, campaignAwards,
   type TournamentState,
 } from "@/lib/cricket/tournament";
 import { MODE_LABELS } from "@/lib/cricket/data";

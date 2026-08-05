@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Play, Calendar, Trophy, HelpCircle, Users } from "lucide-react";
+import { Play, Calendar, Trophy, HelpCircle, Users, Github } from "lucide-react";
 import { HowToPlay } from "./HowToPlay";
 
 interface Props { onPlay: () => void; }
