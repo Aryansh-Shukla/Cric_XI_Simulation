@@ -1,6 +1,6 @@
 import type {
   Player, GameMode, MatchResult, StageKind, LimitedScorecard, TestScorecard,
-  PlayerAgg, FullInnings,
+  PlayerAgg, FullInnings, Innings,
 } from "./types";
 import { KNOCKOUT_STAGES } from "./types";
 import { CHEMISTRY } from "./data";
@@ -70,6 +70,17 @@ export function netRunRate(r: StandingRow): number {
   const forRate = r.oversFor > 0 ? r.runsFor / r.oversFor : 0;
   const againstRate = r.oversAgainst > 0 ? r.runsAgainst / r.oversAgainst : 0;
   return Math.round((forRate - againstRate) * 1000) / 1000;
+}
+
+/**
+ * Overs faced for NRR purposes. Cricket "overs" are 49.3 = 49 overs 3 balls, so
+ * convert to true decimal, and count the full quota when a side is bowled out.
+ */
+function nrrOvers(inn: Innings, maxOvers: number): number {
+  if (inn.wickets >= 10) return maxOvers;
+  const whole = Math.floor(inn.overs);
+  const balls = Math.round((inn.overs - whole) * 10);
+  return Math.min(maxOvers, whole + balls / 6);
 }
 
 /**
@@ -179,11 +190,16 @@ function ensureRow(store: Record<string, StandingRow>, name: string, isOurs: boo
 function recordStanding(store: Record<string, StandingRow>, r: LimitedScorecard, ourIsUser: boolean) {
   const home = ensureRow(store, r.ourName, ourIsUser);
   const away = ensureRow(store, r.oppName, false);
+  // NRR uses the full quota whenever a side is bowled out, exactly like the
+  // official rule — otherwise skittling a team cheaply would *hurt* the winner.
+  const maxOvers = r.format === "T20" ? 20 : 50;
+  const ourOvers = nrrOvers(r.ourInnings, maxOvers);
+  const oppOvers = nrrOvers(r.oppInnings, maxOvers);
   home.played++; away.played++;
-  home.runsFor += r.ourInnings.runs; home.oversFor += r.ourInnings.overs;
-  home.runsAgainst += r.oppInnings.runs; home.oversAgainst += r.oppInnings.overs;
-  away.runsFor += r.oppInnings.runs; away.oversFor += r.oppInnings.overs;
-  away.runsAgainst += r.ourInnings.runs; away.oversAgainst += r.ourInnings.overs;
+  home.runsFor += r.ourInnings.runs; home.oversFor += ourOvers;
+  home.runsAgainst += r.oppInnings.runs; home.oversAgainst += oppOvers;
+  away.runsFor += r.oppInnings.runs; away.oversFor += oppOvers;
+  away.runsAgainst += r.ourInnings.runs; away.oversAgainst += ourOvers;
   if (r.weWon) { home.wins++; home.points += 2; away.losses++; }
   else { away.wins++; away.points += 2; home.losses++; }
 }
@@ -243,7 +259,7 @@ function statKey(name: string, team: string) { return `${team}::${name}`; }
 function ensureAgg(store: Record<string, PlayerAgg>, name: string, team: string, isOurs: boolean): PlayerAgg {
   const k = statKey(name, team);
   if (!store[k]) {
-    store[k] = { name, team, matches: 0, runs: 0, balls: 0, fours: 0, sixes: 0, wickets: 0, ballsBowled: 0, runsConceded: 0, isOurs };
+    store[k] = { name, team, matches: 0, runs: 0, balls: 0, outs: 0, fours: 0, sixes: 0, wickets: 0, ballsBowled: 0, runsConceded: 0, isOurs };
   }
   // Ownership can be discovered later (a player may first appear as a bowler).
   if (isOurs) store[k].isOurs = true;
@@ -266,6 +282,7 @@ function accumulate(store: Record<string, PlayerAgg>, r: MatchResult, isOurs: bo
       const a = ensureAgg(store, b.name, team, teamIsOurs);
       a.runs += b.runs;
       a.balls += b.balls;
+      if (b.out) a.outs += 1;
       a.fours += b.fours;
       a.sixes += b.sixes;
       seen.add(statKey(b.name, team));
@@ -494,4 +511,53 @@ export function topWicketTakers(state: TournamentState, n = 8): PlayerAgg[] {
     .filter(p => p.wickets > 0)
     .sort((a, b) => b.wickets - a.wickets || a.runsConceded - b.runsConceded)
     .slice(0, n);
+}
+
+export interface CampaignAward {
+  name: string;
+  team: string;
+  /** 1-based position in the tournament-wide leaderboard. */
+  rank: number;
+  runs?: number;
+  average?: number;
+  strikeRate?: number;
+  wickets?: number;
+  economy?: number;
+}
+
+/**
+ * The user's best batter and bowler, ranked inside the same tournament-wide
+ * leaderboards shown on the Leaders tab (no separate stats system).
+ */
+export function campaignAwards(state: TournamentState): { batter?: CampaignAward; bowler?: CampaignAward } {
+  const all = Object.values(state.playerStats);
+  const runBoard = all.filter(p => p.runs > 0).sort((a, b) => b.runs - a.runs);
+  const wicketBoard = all
+    .filter(p => p.wickets > 0)
+    .sort((a, b) => b.wickets - a.wickets || a.runsConceded - b.runsConceded);
+
+  const bat = runBoard.find(p => p.isOurs);
+  const bowl = wicketBoard.find(p => p.isOurs);
+
+  return {
+    batter: bat && {
+      name: bat.name,
+      team: bat.team,
+      rank: runBoard.indexOf(bat) + 1,
+      runs: bat.runs,
+      average: bat.outs > 0
+        ? Math.round((bat.runs / bat.outs) * 100) / 100
+        : bat.runs,
+      strikeRate: bat.balls > 0 ? Math.round((bat.runs * 100) / bat.balls) : 0,
+    },
+    bowler: bowl && {
+      name: bowl.name,
+      team: bowl.team,
+      rank: wicketBoard.indexOf(bowl) + 1,
+      wickets: bowl.wickets,
+      economy: bowl.ballsBowled > 0
+        ? Math.round((bowl.runsConceded * 6 / bowl.ballsBowled) * 100) / 100
+        : 0,
+    },
+  };
 }

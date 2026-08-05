@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Play, Calendar, Trophy, HelpCircle, Users } from "lucide-react";
+import { Play, Calendar, Trophy, HelpCircle, Users, Github } from "lucide-react";
 import { HowToPlay } from "./HowToPlay";
 
 interface Props { onPlay: () => void; }
@@ -86,9 +86,21 @@ export function Landing({ onPlay }: Props) {
           </div>
         </motion.div>
 
-        <div className="mt-14 text-center text-xs text-muted-foreground">
-          Fictional draft simulator · No affiliation with any cricket board.
-        </div>
+        <footer className="mt-14 w-full max-w-3xl border-t border-[color:var(--border)]/60 pt-6 text-center">
+          <div className="text-xs text-muted-foreground">
+            Fictional draft simulator · No affiliation with any cricket board.
+          </div>
+          <div className="mt-4 text-sm font-medium">Built by Aryansh Shukla</div>
+          <div className="mt-1 text-[11px] uppercase tracking-widest text-muted-foreground">Let&apos;s Connect</div>
+          <a
+            href="https://github.com/aryanshshukla"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] px-4 py-1.5 text-xs text-muted-foreground transition-colors hover:border-[color:var(--gold)]/50 hover:text-gold"
+          >
+            <Github className="h-3.5 w-3.5" /> GitHub
+          </a>
+        </footer>
       </div>
     </div>
   );
