@@ -135,14 +135,27 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
   );
 
   const applyReroll = (candidates: Squad[]) => {
-    const fallback = candidates.length ? candidates : [];
-    if (!fallback.length) return false;
-    const shuffled = shuffle(fallback);
+    if (!candidates.length) return false;
+    const shuffled = shuffle(candidates);
     const next = shuffled.find(s => squadHasValidPick(s, picked, mode, remainingSlots)) ?? shuffled[0];
-    setSquad(next);
-    setEmergency(false);
-    setChoices(pickChoices(next, picked, mode, remainingSlots, true));
-    setRecentSquadIds(r => [...r, next.id].slice(-5));
+    let nextSquad = next;
+    let nextChoices = pickChoices(next, picked, mode, remainingSlots, true);
+    let nextEmergency = false;
+    // If the rerolled squad cannot offer a legal pick, recover *inside* the
+    // reroll candidates so the team/edition invariant is never broken by the
+    // global auto-rescue (which would swap in an unrelated squad).
+    if (!nextChoices.some(p => canPickPlayer(p, { picked, mode, remainingSlots }).canPick)) {
+      const rescue = rescueDeal(shuffled, picked, mode, remainingSlots);
+      if (rescue.choices.length) {
+        nextChoices = rescue.choices;
+        if (rescue.squad) nextSquad = rescue.squad;
+        else nextEmergency = true;
+      }
+    }
+    setSquad(nextSquad);
+    setEmergency(nextEmergency);
+    setChoices(nextChoices);
+    setRecentSquadIds(r => [...r, nextSquad.id].slice(-5));
     return true;
   };
 

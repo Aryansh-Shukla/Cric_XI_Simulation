@@ -512,3 +512,52 @@ export function topWicketTakers(state: TournamentState, n = 8): PlayerAgg[] {
     .sort((a, b) => b.wickets - a.wickets || a.runsConceded - b.runsConceded)
     .slice(0, n);
 }
+
+export interface CampaignAward {
+  name: string;
+  team: string;
+  /** 1-based position in the tournament-wide leaderboard. */
+  rank: number;
+  runs?: number;
+  average?: number;
+  strikeRate?: number;
+  wickets?: number;
+  economy?: number;
+}
+
+/**
+ * The user's best batter and bowler, ranked inside the same tournament-wide
+ * leaderboards shown on the Leaders tab (no separate stats system).
+ */
+export function campaignAwards(state: TournamentState): { batter?: CampaignAward; bowler?: CampaignAward } {
+  const all = Object.values(state.playerStats);
+  const runBoard = all.filter(p => p.runs > 0).sort((a, b) => b.runs - a.runs);
+  const wicketBoard = all
+    .filter(p => p.wickets > 0)
+    .sort((a, b) => b.wickets - a.wickets || a.runsConceded - b.runsConceded);
+
+  const bat = runBoard.find(p => p.isOurs);
+  const bowl = wicketBoard.find(p => p.isOurs);
+
+  return {
+    batter: bat && {
+      name: bat.name,
+      team: bat.team,
+      rank: runBoard.indexOf(bat) + 1,
+      runs: bat.runs,
+      average: bat.outs > 0
+        ? Math.round((bat.runs / bat.outs) * 100) / 100
+        : bat.runs,
+      strikeRate: bat.balls > 0 ? Math.round((bat.runs * 100) / bat.balls) : 0,
+    },
+    bowler: bowl && {
+      name: bowl.name,
+      team: bowl.team,
+      rank: wicketBoard.indexOf(bowl) + 1,
+      wickets: bowl.wickets,
+      economy: bowl.ballsBowled > 0
+        ? Math.round((bowl.runsConceded * 6 / bowl.ballsBowled) * 100) / 100
+        : 0,
+    },
+  };
+}
