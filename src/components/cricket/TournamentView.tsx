@@ -260,6 +260,7 @@ function FinaleCard({ state, mode, onRestart }: { state: TournamentState; mode: 
           Player of the Series: <span className="text-foreground">{state.playerOfSeries}</span>
         </div>
       )}
+      <CampaignAwards state={state} />
       <div className="mt-6 flex justify-center gap-2">
         <button onClick={onRestart} className="btn-gold inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold">
           Play Again <ArrowRight className="h-4 w-4" />
