@@ -1,6 +1,6 @@
 import type {
   Player, GameMode, MatchResult, StageKind, LimitedScorecard, TestScorecard,
-  PlayerAgg, FullInnings,
+  PlayerAgg, FullInnings, Innings,
 } from "./types";
 import { KNOCKOUT_STAGES } from "./types";
 import { CHEMISTRY } from "./data";
@@ -81,12 +81,6 @@ function nrrOvers(inn: Innings, maxOvers: number): number {
   const whole = Math.floor(inn.overs);
   const balls = Math.round((inn.overs - whole) * 10);
   return Math.min(maxOvers, whole + balls / 6);
-}
-
-function legacyNetRunRate(r: StandingRow): number {
-  const forRate = r.oversFor > 0 ? r.runsFor / r.oversFor : 0;
-  const againstRate = r.oversAgainst > 0 ? r.runsAgainst / r.oversAgainst : 0;
-  return Math.round((forRate - againstRate) * 1000) / 1000;
 }
 
 /**
