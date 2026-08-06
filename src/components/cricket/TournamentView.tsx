@@ -265,7 +265,7 @@ function FinaleCard({ state, mode, onRestart }: { state: TournamentState; mode: 
       </h3>
       <p className="mt-2 text-muted-foreground">
         {won
-          ? "Your XI has lifted the trophy. Legendary."
+          ? `${state.ourName} has lifted the trophy. Legendary.`
           : mode === "TEST"
             ? state.seriesResult
             : `Record: ${state.wins}W – ${state.losses}L. Rebuild your XI and take another shot.`}
