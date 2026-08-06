@@ -26,6 +26,7 @@ function Index() {
   const [difficulty, setDifficulty] = useState<Difficulty>("Medium");
   const [players, setPlayers] = useState<Player[]>([]);
   const [leadership, setLeadership] = useState<LeadershipChoice | null>(null);
+  const [teamName, setTeamName] = useState("");
 
   // Dev-only catalogue integrity report.
   useEffect(() => {
@@ -36,6 +37,7 @@ function Index() {
   const reset = () => {
     setPlayers([]);
     setLeadership(null);
+    setTeamName("");
     setScreen("mode");
   };
 
@@ -45,7 +47,7 @@ function Index() {
       {screen === "mode" && (
         <ModeSelect
           onBack={() => setScreen("landing")}
-          onStart={(m, d) => { setMode(m); setDifficulty(d); setPlayers([]); setLeadership(null); setScreen("draft"); }}
+          onStart={(m, d) => { setMode(m); setDifficulty(d); setPlayers([]); setLeadership(null); setTeamName(""); setScreen("draft"); }}
         />
       )}
       {screen === "draft" && (
@@ -58,6 +60,8 @@ function Index() {
       {screen === "leadership" && (
         <Leadership
           players={players}
+          teamName={teamName}
+          onTeamNameChange={setTeamName}
           onBack={() => setScreen("draft")}
           onConfirm={(l) => { setLeadership(l); setScreen("team"); }}
         />
@@ -72,7 +76,7 @@ function Index() {
         />
       )}
       {screen === "tournament" && (
-        <TournamentView players={players} mode={mode} leadership={leadership} onRestart={reset} />
+        <TournamentView players={players} mode={mode} leadership={leadership} teamName={teamName} onRestart={reset} />
       )}
     </div>
   );

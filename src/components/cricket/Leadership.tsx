@@ -7,9 +7,11 @@ interface Props {
   players: Player[];
   onBack: () => void;
   onConfirm: (leadership: { captainId: string; viceCaptainId: string; keeperId: string }) => void;
+  teamName: string;
+  onTeamNameChange: (name: string) => void;
 }
 
-export function Leadership({ players, onBack, onConfirm }: Props) {
+export function Leadership({ players, onBack, onConfirm, teamName, onTeamNameChange }: Props) {
   const keepers = useMemo(() => players.filter(p => p.role === "Wicketkeeper"), [players]);
   const suggestedCaptain = useMemo(
     () => [...players].sort((a, b) => b.stats.leadership - a.stats.leadership)[0],
@@ -36,6 +38,24 @@ export function Leadership({ players, onBack, onConfirm }: Props) {
         <div className="text-xs uppercase tracking-widest text-gold">Leadership</div>
         <h2 className="mt-1 text-3xl font-bold md:text-4xl">Appoint your leaders</h2>
         <p className="mt-1 text-sm text-muted-foreground">Captaincy and the gloves influence pressure moments in the simulation.</p>
+
+        <div className="mt-6 glass-card rounded-2xl p-4">
+          <label htmlFor="team-name" className="text-xs uppercase tracking-widest text-muted-foreground">
+            Name Your Team
+          </label>
+          <input
+            id="team-name"
+            type="text"
+            value={teamName}
+            maxLength={24}
+            onChange={e => onTeamNameChange(e.target.value)}
+            placeholder="Your XI"
+            className="mt-2 w-full rounded-xl border border-[color:var(--border)] bg-[color:var(--muted)]/30 px-4 py-2.5 text-base outline-none transition-colors placeholder:text-muted-foreground focus:border-[color:var(--gold)]/60 sm:max-w-sm"
+          />
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            Optional · up to 24 characters. Leave blank to use the default &ldquo;Your XI&rdquo;.
+          </p>
+        </div>
 
         <div className="mt-8 grid gap-6 lg:grid-cols-3">
           <LeaderColumn
