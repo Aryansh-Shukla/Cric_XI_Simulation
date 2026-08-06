@@ -2,17 +2,13 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Play, Calendar, Trophy, HelpCircle, Users, Github } from "lucide-react";
 import { HowToPlay } from "./HowToPlay";
+import { listChampions } from "@/lib/cricket/champions";
 
 interface Props { onPlay: () => void; }
 
-const recentWinners = [
-  { name: "Priya S.", team: "India 2011 core", when: "2m ago" },
-  { name: "Alex R.",  team: "Aussie 2003 pace attack", when: "9m ago" },
-  { name: "Kabir M.", team: "1992 Cornered Tigers", when: "22m ago" },
-];
-
 export function Landing({ onPlay }: Props) {
   const [howToOpen, setHowToOpen] = useState(false);
+  const [champions] = useState(() => listChampions(3));
   return (
     <div className="relative min-h-screen overflow-hidden">
       <div className="pointer-events-none absolute inset-0" style={{ background: "var(--gradient-hero)" }} />
