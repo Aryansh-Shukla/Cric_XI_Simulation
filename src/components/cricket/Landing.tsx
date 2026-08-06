@@ -2,17 +2,13 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Play, Calendar, Trophy, HelpCircle, Users, Github } from "lucide-react";
 import { HowToPlay } from "./HowToPlay";
+import { listChampions } from "@/lib/cricket/champions";
 
 interface Props { onPlay: () => void; }
 
-const recentWinners = [
-  { name: "Priya S.", team: "India 2011 core", when: "2m ago" },
-  { name: "Alex R.",  team: "Aussie 2003 pace attack", when: "9m ago" },
-  { name: "Kabir M.", team: "1992 Cornered Tigers", when: "22m ago" },
-];
-
 export function Landing({ onPlay }: Props) {
   const [howToOpen, setHowToOpen] = useState(false);
+  const [champions] = useState(() => listChampions(3));
   return (
     <div className="relative min-h-screen overflow-hidden">
       <div className="pointer-events-none absolute inset-0" style={{ background: "var(--gradient-hero)" }} />
@@ -66,21 +62,26 @@ export function Landing({ onPlay }: Props) {
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.6 }} className="mt-14 w-full max-w-3xl">
           <div className="mb-3 flex items-center gap-2 px-2 text-xs uppercase tracking-widest text-muted-foreground">
-            <Users className="h-3.5 w-3.5" /> Recent Winners
+            <Users className="h-3.5 w-3.5" /> Recent Champions
           </div>
           <div className="glass-card grid gap-2 rounded-2xl p-2">
-            {recentWinners.map((w) => (
-              <div key={w.name} className="flex items-center justify-between rounded-xl px-4 py-3 hover:bg-white/5">
-                <div className="flex items-center gap-3">
-                  <div className="grid h-9 w-9 place-items-center rounded-full bg-[color:var(--gold)]/10 text-sm font-semibold text-gold">
-                    {w.name.split(" ").map(x => x[0]).join("")}
+            {champions.map((c) => (
+              <div key={c.id} className="flex items-center justify-between gap-3 rounded-xl px-4 py-3 hover:bg-white/5">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[color:var(--gold)]/10 text-sm text-gold">
+                    🏆
                   </div>
-                  <div>
-                    <div className="text-sm font-medium">{w.name}</div>
-                    <div className="text-xs text-muted-foreground">{w.team}</div>
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-medium">{c.teamName}</div>
+                    <div className="truncate text-xs text-muted-foreground">{c.achievement}</div>
                   </div>
                 </div>
-                <div className="text-xs text-muted-foreground">{w.when}</div>
+                <div className="shrink-0 text-right">
+                  <div className="text-xs font-semibold text-gold">{c.score.toLocaleString()}</div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    {new Date(c.date).toLocaleDateString(undefined, { month: "short", year: "numeric" })}
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -92,14 +93,24 @@ export function Landing({ onPlay }: Props) {
           </div>
           <div className="mt-4 text-sm font-medium">Built by Aryansh Shukla</div>
           <div className="mt-1 text-[11px] uppercase tracking-widest text-muted-foreground">Let&apos;s Connect</div>
-          <a
-            href="https://github.com/aryanshshukla"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-3 inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] px-4 py-1.5 text-xs text-muted-foreground transition-colors hover:border-[color:var(--gold)]/50 hover:text-gold"
-          >
-            <Github className="h-3.5 w-3.5" /> GitHub
-          </a>
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+            <a
+              href="https://github.com/Aryansh-Shukla"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] px-4 py-1.5 text-xs text-muted-foreground transition-colors hover:border-[color:var(--gold)]/50 hover:text-gold"
+            >
+              <Github className="h-3.5 w-3.5" /> GitHub
+            </a>
+            <a
+              href="https://x.com/AryanshShu87068"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] px-4 py-1.5 text-xs text-muted-foreground transition-colors hover:border-[color:var(--gold)]/50 hover:text-gold"
+            >
+              <span className="text-sm leading-none font-semibold">𝕏</span> X
+            </a>
+          </div>
         </footer>
       </div>
     </div>

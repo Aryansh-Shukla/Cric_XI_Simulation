@@ -1,4 +1,4 @@
-import { Component, useMemo, useState, type ReactNode } from "react";
+import { Component, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Trophy, CloudRain, Sun, Cloud, Moon, ArrowRight, RotateCcw, MapPin, Coins,
@@ -13,12 +13,15 @@ import {
   type TournamentState,
 } from "@/lib/cricket/tournament";
 import { MODE_LABELS } from "@/lib/cricket/data";
+import { recordChampion } from "@/lib/cricket/champions";
 import { ScorecardModal } from "./ScorecardModal";
 
 interface Props {
   players: Player[];
   mode: GameMode;
   leadership?: { captainId: string; viceCaptainId: string; keeperId: string } | null;
+  /** Optional custom team identity; falls back to the default squad naming. */
+  teamName?: string;
   onRestart: () => void;
 }
 
@@ -70,13 +73,28 @@ export function TournamentView(props: Props) {
 
 type Tab = "matches" | "leaders" | "standings";
 
-function TournamentInner({ players, mode, leadership, onRestart }: Props) {
+function TournamentInner({ players, mode, leadership, teamName, onRestart }: Props) {
+  const ourName = teamName?.trim() || undefined;
   const [state, setState] = useState<TournamentState>(() =>
-    createTournament(players, mode, undefined, leadership?.captainId),
+    createTournament(players, mode, undefined, leadership?.captainId, ourName),
   );
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<Tab>("matches");
   const [scorecard, setScorecard] = useState<MatchResult | null>(null);
+  const recorded = useRef(false);
+
+  // Persist a real champions-feed record once the campaign is won.
+  useEffect(() => {
+    if (!state.complete || !state.championshipWon || recorded.current) return;
+    recorded.current = true;
+    const tournament = MODE_LABELS[mode].title;
+    recordChampion({
+      teamName: state.ourName,
+      tournament,
+      achievement: `Won ${tournament}`,
+      score: state.finalScore,
+    });
+  }, [state.complete, state.championshipWon, state.ourName, state.finalScore, mode]);
 
   const nextFixture = state.fixtures[state.currentIndex];
   const done = state.complete;
@@ -156,7 +174,7 @@ function Header({ state, mode, onRestart }: { state: TournamentState; mode: Game
         <div className="text-xs uppercase tracking-widest text-gold">
           {MODE_LABELS[mode].title} · Live Tournament
         </div>
-        <h2 className="mt-1 text-3xl font-bold md:text-4xl">Tournament</h2>
+        <h2 className="mt-1 text-3xl font-bold md:text-4xl">{state.ourName}</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Captain: <span className="text-foreground">{state.captain.name}</span>
           <span className="mx-2 opacity-40">·</span>
@@ -247,7 +265,7 @@ function FinaleCard({ state, mode, onRestart }: { state: TournamentState; mode: 
       </h3>
       <p className="mt-2 text-muted-foreground">
         {won
-          ? "Your XI has lifted the trophy. Legendary."
+          ? `${state.ourName} has lifted the trophy. Legendary.`
           : mode === "TEST"
             ? state.seriesResult
             : `Record: ${state.wins}W – ${state.losses}L. Rebuild your XI and take another shot.`}
