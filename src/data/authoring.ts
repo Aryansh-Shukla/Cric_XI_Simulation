@@ -1,7 +1,12 @@
 import type { Role, Trait } from "@/lib/cricket/types";
 import type {
-  BowlingRole, CanonicalPlayer, CompetitionId, DetailedRole,
-  HistoricalSquad, PlayerEditionProfile, SourceStatus,
+  BowlingRole,
+  CanonicalPlayer,
+  CompetitionId,
+  DetailedRole,
+  HistoricalSquad,
+  PlayerEditionProfile,
+  SourceStatus,
 } from "./model";
 import { EDITION_BY_ID } from "./competitions";
 import { TEAM_BY_ID, teamNameForYear } from "./teams";
@@ -30,29 +35,48 @@ const ROLE_CODES: Record<string, Role> = {
 };
 
 export const canonicalPlayerId = (name: string) =>
-  name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
 
 const clamp = (n: number) => Math.max(1, Math.min(99, Math.round(n)));
 
 /** The agreed role-specific Overall formulas. Single source of truth. */
-export function computeOverall(role: Role, batting: number, bowling: number, fielding: number, wk?: number): number {
+export function computeOverall(
+  role: Role,
+  batting: number,
+  bowling: number,
+  fielding: number,
+  wk?: number,
+): number {
   switch (role) {
-    case "Batsman": return Math.round(batting);
+    case "Batsman":
+      return Math.round(batting);
     case "PaceBowler":
-    case "SpinBowler": return Math.round(bowling);
-    case "AllRounder": return Math.round((batting + bowling) / 2);
-    case "Wicketkeeper": return Math.round((batting + (wk ?? fielding)) / 2);
+    case "SpinBowler":
+      return Math.round(bowling);
+    case "AllRounder":
+      return Math.round((batting + bowling) / 2);
+    case "Wicketkeeper":
+      return Math.round((batting + (wk ?? fielding)) / 2);
   }
 }
 
 function defaultDetailedRole(role: Role, batting: number, bowling: number): DetailedRole {
   switch (role) {
-    case "Batsman": return batting >= 88 ? "Top Order" : "Middle Order";
-    case "Wicketkeeper": return "Wicketkeeper-Batter";
-    case "AllRounder": return batting >= bowling ? "Batting All-rounder" : "Bowling All-rounder";
-    case "PaceBowler": return bowling >= 88 ? "Fast Bowler" : "Fast-medium Bowler";
-    case "SpinBowler": return "Off-spinner";
+    case "Batsman":
+      return batting >= 88 ? "Top Order" : "Middle Order";
+    case "Wicketkeeper":
+      return "Wicketkeeper-Batter";
+    case "AllRounder":
+      return batting >= bowling ? "Batting All-rounder" : "Bowling All-rounder";
+    case "PaceBowler":
+      return bowling >= 88 ? "Fast Bowler" : "Fast-medium Bowler";
+    case "SpinBowler":
+      return "Off-spinner";
   }
 }
 
@@ -63,7 +87,13 @@ function deriveBowlingRole(role: Role, bowling: number): BowlingRole {
   return "none";
 }
 
-function deriveTraits(role: Role, bat: number, bowl: number, isCaptain: boolean, year: number): Trait[] {
+function deriveTraits(
+  role: Role,
+  bat: number,
+  bowl: number,
+  isCaptain: boolean,
+  year: number,
+): Trait[] {
   const t: Trait[] = [];
   if (isCaptain) t.push("Captain Fantastic");
   if (role === "Batsman" && bat >= 92) t.push("Run Machine");
@@ -105,7 +135,7 @@ export function defineSquad(input: SquadInput): HistoricalSquad {
   const profileIds: string[] = [];
 
   for (const row of input.rows) {
-    const parts = row.split("|").map(s => s.trim());
+    const parts = row.split("|").map((s) => s.trim());
     const [name, roleCode, batS, bowlS, fldS, ...flags] = parts;
     const role = ROLE_CODES[roleCode];
     if (!role) throw new Error(`[data] bad role "${roleCode}" in ${squadId} (${name})`);
@@ -115,8 +145,8 @@ export function defineSquad(input: SquadInput): HistoricalSquad {
     const fielding = clamp(Number(fldS));
 
     const isCaptain = flags.includes("C");
-    const nationalityFlag = flags.find(f => f.startsWith("@"));
-    const detailFlag = flags.find(f => f.startsWith(">"));
+    const nationalityFlag = flags.find((f) => f.startsWith("@"));
+    const detailFlag = flags.find((f) => f.startsWith(">"));
     const nationality = nationalityFlag ? nationalityFlag.slice(1) : team.country;
     const canKeepWicket = role === "Wicketkeeper" || flags.includes("K");
     const wicketkeeping = canKeepWicket ? clamp(fielding + 2) : undefined;
@@ -142,7 +172,8 @@ export function defineSquad(input: SquadInput): HistoricalSquad {
       teamId: input.teamId,
       squadId,
       role,
-      primaryRole: (detailFlag?.slice(1) as DetailedRole) ?? defaultDetailedRole(role, batting, bowling),
+      primaryRole:
+        (detailFlag?.slice(1) as DetailedRole) ?? defaultDetailedRole(role, batting, bowling),
       secondaryRoles: [],
       batting,
       bowling,

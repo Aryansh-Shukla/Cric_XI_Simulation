@@ -23,13 +23,19 @@ export function ScorecardModal({ result, onClose }: Props) {
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 24, opacity: 0 }}
             className="glass-card my-8 w-full max-w-4xl rounded-2xl"
-            onClick={e => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-[color:var(--border)] px-5 py-3">
               <div>
-                <div className="text-xs uppercase tracking-widest text-gold">{result.stage} · {result.format}</div>
-                <div className="mt-1 text-lg font-bold">{result.ourName} vs {result.oppName}</div>
-                <div className="text-xs text-muted-foreground">{result.resultLine} · {result.venue}</div>
+                <div className="text-xs uppercase tracking-widest text-gold">
+                  {result.stage} · {result.format}
+                </div>
+                <div className="mt-1 text-lg font-bold">
+                  {result.ourName} vs {result.oppName}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {result.resultLine} · {result.venue}
+                </div>
               </div>
               <button onClick={onClose} className="rounded-full p-2 hover:bg-white/10">
                 <X className="h-5 w-5" />
@@ -42,13 +48,19 @@ export function ScorecardModal({ result, onClose }: Props) {
                   <div className="mt-2 grid gap-1 text-sm">
                     <div className="flex justify-between">
                       <span>{result.superOver.ours.teamName}</span>
-                      <span className="font-bold">{result.superOver.ours.runs}/{result.superOver.ours.wickets}</span>
+                      <span className="font-bold">
+                        {result.superOver.ours.runs}/{result.superOver.ours.wickets}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span>{result.superOver.opp.teamName}</span>
-                      <span className="font-bold">{result.superOver.opp.runs}/{result.superOver.opp.wickets}</span>
+                      <span className="font-bold">
+                        {result.superOver.opp.runs}/{result.superOver.opp.wickets}
+                      </span>
                     </div>
-                    <div className="mt-1 text-xs text-gold">{result.superOver.winner} won the Super Over</div>
+                    <div className="mt-1 text-xs text-gold">
+                      {result.superOver.winner} won the Super Over
+                    </div>
                   </div>
                 </div>
               )}
@@ -56,7 +68,9 @@ export function ScorecardModal({ result, onClose }: Props) {
                 <InningsTable key={i} inn={inn} />
               ))}
               {!result.full?.length && (
-                <div className="text-sm text-muted-foreground">Detailed scorecard unavailable for this match.</div>
+                <div className="text-sm text-muted-foreground">
+                  Detailed scorecard unavailable for this match.
+                </div>
               )}
             </div>
           </motion.div>
@@ -73,7 +87,9 @@ function InningsTable({ inn }: { inn: FullInnings }) {
         <div className="text-sm font-semibold text-gold">{inn.label ?? inn.teamName}</div>
         <div className="text-lg font-bold">
           {inn.runs}/{inn.wickets}
-          <span className="ml-1 text-xs font-normal text-muted-foreground">({inn.overs.toFixed(1)})</span>
+          <span className="ml-1 text-xs font-normal text-muted-foreground">
+            ({inn.overs.toFixed(1)})
+          </span>
         </div>
       </div>
       <div className="overflow-x-auto rounded-lg border border-[color:var(--border)]">
@@ -93,13 +109,17 @@ function InningsTable({ inn }: { inn: FullInnings }) {
               <tr key={i} className="border-t border-[color:var(--border)]/40">
                 <td className="px-3 py-1.5">
                   <span className={b.out ? "" : "text-foreground"}>{b.name}</span>
-                  <span className="ml-2 text-[10px] text-muted-foreground">{b.out ? (b.how ?? "out") : "not out"}</span>
+                  <span className="ml-2 text-[10px] text-muted-foreground">
+                    {b.out ? (b.how ?? "out") : "not out"}
+                  </span>
                 </td>
                 <td className="px-3 py-1.5 text-right font-semibold">{b.runs}</td>
                 <td className="px-3 py-1.5 text-right">{b.balls}</td>
                 <td className="px-3 py-1.5 text-right">{b.fours}</td>
                 <td className="px-3 py-1.5 text-right">{b.sixes}</td>
-                <td className="px-3 py-1.5 text-right">{b.balls ? Math.round((b.runs * 100) / b.balls) : 0}</td>
+                <td className="px-3 py-1.5 text-right">
+                  {b.balls ? Math.round((b.runs * 100) / b.balls) : 0}
+                </td>
               </tr>
             ))}
           </tbody>

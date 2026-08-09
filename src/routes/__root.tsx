@@ -8,6 +8,7 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import { Analytics } from "@vercel/analytics/react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -78,10 +79,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Cricket XI — Draft Legends. Build Dynasties." },
-      { name: "description", content: "Draft an all-time cricket XI from legendary squads and simulate a full tournament run in minutes." },
+      {
+        name: "description",
+        content:
+          "Draft an all-time cricket XI from legendary squads and simulate a full tournament run in minutes.",
+      },
       { name: "author", content: "Cricket XI" },
       { property: "og:title", content: "Cricket XI — Draft Legends. Build Dynasties." },
-      { property: "og:description", content: "Draft an all-time cricket XI from legendary squads and simulate a full tournament run in minutes." },
+      {
+        property: "og:description",
+        content:
+          "Draft an all-time cricket XI from legendary squads and simulate a full tournament run in minutes.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -108,6 +117,7 @@ function RootShell({ children }: { children: ReactNode }) {
       <body>
         {children}
         <Scripts />
+        <Analytics />
       </body>
     </html>
   );

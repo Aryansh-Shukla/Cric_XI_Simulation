@@ -14,19 +14,34 @@ export interface RequirementStatus extends Requirement {
 
 export function requirementsFor(_mode: GameMode): Requirement[] {
   return [
-    { key: "wk",     label: "Wicketkeeper",     required: 1, matches: p => p.role === "Wicketkeeper" },
-    { key: "opener", label: "Opener",           required: 2, matches: p => p.role === "Batsman" || p.role === "Wicketkeeper" },
-    { key: "mid",    label: "Middle Order",     required: 2, matches: p => p.role === "Batsman" || p.role === "AllRounder" || p.role === "Wicketkeeper" },
-    { key: "ar",     label: "All-rounder",      required: 1, matches: p => p.role === "AllRounder" },
-    { key: "pace",   label: "Pace Bowlers",     required: 2, matches: p => p.role === "PaceBowler" },
-    { key: "spin",   label: "Spinner",          required: 1, matches: p => p.role === "SpinBowler" },
-    { key: "bowl",   label: "Bowling Options",  required: 5, matches: p => p.role === "PaceBowler" || p.role === "SpinBowler" || p.role === "AllRounder" },
+    { key: "wk", label: "Wicketkeeper", required: 1, matches: (p) => p.role === "Wicketkeeper" },
+    {
+      key: "opener",
+      label: "Opener",
+      required: 2,
+      matches: (p) => p.role === "Batsman" || p.role === "Wicketkeeper",
+    },
+    {
+      key: "mid",
+      label: "Middle Order",
+      required: 2,
+      matches: (p) => p.role === "Batsman" || p.role === "AllRounder" || p.role === "Wicketkeeper",
+    },
+    { key: "ar", label: "All-rounder", required: 1, matches: (p) => p.role === "AllRounder" },
+    { key: "pace", label: "Pace Bowlers", required: 2, matches: (p) => p.role === "PaceBowler" },
+    { key: "spin", label: "Spinner", required: 1, matches: (p) => p.role === "SpinBowler" },
+    {
+      key: "bowl",
+      label: "Bowling Options",
+      required: 5,
+      matches: (p) => p.role === "PaceBowler" || p.role === "SpinBowler" || p.role === "AllRounder",
+    },
   ];
 }
 
 export function computeStatus(players: Player[], mode: GameMode): RequirementStatus[] {
   const reqs = requirementsFor(mode);
-  return reqs.map(r => {
+  return reqs.map((r) => {
     const filled = players.filter(r.matches).length;
     return { ...r, filled, satisfied: filled >= r.required };
   });
@@ -48,7 +63,7 @@ type RoleKey = (typeof ROLES)[number];
 
 /** Which roles can satisfy each requirement, derived from the requirement matcher. */
 function rolesSatisfying(req: Requirement): RoleKey[] {
-  return ROLES.filter(role => req.matches({ role } as unknown as Player));
+  return ROLES.filter((role) => req.matches({ role } as unknown as Player));
 }
 
 /**
@@ -58,19 +73,26 @@ function rolesSatisfying(req: Requirement): RoleKey[] {
  * AND a pace bowler with one slot left) slipped through and dead-ended the draft.
  */
 export function canCompleteXI(picked: Player[], mode: GameMode, slotsLeft: number): boolean {
-  const reqs = requirementsFor(mode).map(r => ({
-    roles: rolesSatisfying(r),
-    deficit: Math.max(0, r.required - picked.filter(r.matches).length),
-  })).filter(r => r.deficit > 0);
+  const reqs = requirementsFor(mode)
+    .map((r) => ({
+      roles: rolesSatisfying(r),
+      deficit: Math.max(0, r.required - picked.filter(r.matches).length),
+    }))
+    .filter((r) => r.deficit > 0);
   if (!reqs.length) return true;
   if (slotsLeft <= 0) return false;
 
   const counts: Record<RoleKey, number> = {
-    Batsman: 0, Wicketkeeper: 0, AllRounder: 0, PaceBowler: 0, SpinBowler: 0,
+    Batsman: 0,
+    Wicketkeeper: 0,
+    AllRounder: 0,
+    PaceBowler: 0,
+    SpinBowler: 0,
   };
-  const batsmenPicked = picked.filter(p => p.role === "Batsman").length;
+  const batsmenPicked = picked.filter((p) => p.role === "Batsman").length;
 
-  const satisfied = () => reqs.every(r => r.roles.reduce((s, role) => s + counts[role], 0) >= r.deficit);
+  const satisfied = () =>
+    reqs.every((r) => r.roles.reduce((s, role) => s + counts[role], 0) >= r.deficit);
 
   // Enumerate every composition of slotsLeft across 5 roles (at most ~1.4k cases).
   const walk = (idx: number, left: number): boolean => {
@@ -79,7 +101,10 @@ export function canCompleteXI(picked: Player[], mode: GameMode, slotsLeft: numbe
     const cap = role === "Batsman" ? Math.min(left, Math.max(0, 7 - batsmenPicked)) : left;
     for (let n = cap; n >= 0; n--) {
       counts[role] = n;
-      if (walk(idx + 1, left - n)) { counts[role] = 0; return true; }
+      if (walk(idx + 1, left - n)) {
+        counts[role] = 0;
+        return true;
+      }
     }
     counts[role] = 0;
     return false;
@@ -97,12 +122,12 @@ export function canPickPlayer(player: Player, ctx: PickabilityContext): Pickabil
   const { picked, mode, remainingSlots } = ctx;
 
   if (mode === "FRANCHISE_T20" && player.isOverseas) {
-    const overseas = picked.filter(p => p.isOverseas).length;
+    const overseas = picked.filter((p) => p.isOverseas).length;
     if (overseas >= 4) return { canPick: false, reason: "Max 4 overseas players" };
   }
 
   if (player.role === "Batsman") {
-    const batsmen = picked.filter(p => p.role === "Batsman").length;
+    const batsmen = picked.filter((p) => p.role === "Batsman").length;
     if (batsmen >= 7) return { canPick: false, reason: "Max 7 specialist batsmen" };
   }
 
@@ -115,18 +140,22 @@ export function canPickPlayer(player: Player, ctx: PickabilityContext): Pickabil
 }
 
 export function overseasCount(players: Player[]) {
-  return players.filter(p => p.isOverseas).length;
+  return players.filter((p) => p.isOverseas).length;
 }
 
 export function estimatedRating(players: Player[]): number {
   if (!players.length) return 0;
   const roleOverall = (p: Player) => {
     switch (p.role) {
-      case "Batsman":      return p.stats.batting;
+      case "Batsman":
+        return p.stats.batting;
       case "PaceBowler":
-      case "SpinBowler":   return p.stats.bowling;
-      case "AllRounder":   return (p.stats.batting + p.stats.bowling) / 2;
-      case "Wicketkeeper": return (p.stats.batting + p.stats.fielding) / 2;
+      case "SpinBowler":
+        return p.stats.bowling;
+      case "AllRounder":
+        return (p.stats.batting + p.stats.bowling) / 2;
+      case "Wicketkeeper":
+        return (p.stats.batting + p.stats.fielding) / 2;
     }
   };
   const sum = players.reduce((s, p) => s + roleOverall(p), 0);

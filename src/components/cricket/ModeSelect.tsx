@@ -19,12 +19,17 @@ export function ModeSelect({ onBack, onStart }: Props) {
   return (
     <div className="min-h-screen px-6 py-10">
       <div className="mx-auto max-w-6xl">
-        <button onClick={onBack} className="mb-8 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+        <button
+          onClick={onBack}
+          className="mb-8 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+        >
           <ArrowLeft className="h-4 w-4" /> Back
         </button>
 
         <h2 className="text-4xl font-bold md:text-5xl">Choose Your Format</h2>
-        <p className="mt-2 text-muted-foreground">Pick a tournament. Every format changes the meta.</p>
+        <p className="mt-2 text-muted-foreground">
+          Pick a tournament. Every format changes the meta.
+        </p>
 
         <div className="mt-8 grid gap-8">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -40,7 +45,9 @@ export function ModeSelect({ onBack, onStart }: Props) {
                   transition={{ delay: i * 0.05 }}
                   whileHover={{ y: -4 }}
                   className={`glass-card rounded-2xl p-6 text-left transition-all ${
-                    active ? "ring-2 ring-[color:var(--gold)] glow-gold" : "hover:ring-1 hover:ring-[color:var(--gold)]/40"
+                    active
+                      ? "ring-2 ring-[color:var(--gold)] glow-gold"
+                      : "hover:ring-1 hover:ring-[color:var(--gold)]/40"
                   }`}
                 >
                   <div className="text-xs uppercase tracking-widest text-gold">{info.format}</div>
@@ -52,9 +59,11 @@ export function ModeSelect({ onBack, onStart }: Props) {
           </div>
 
           <div className="glass-card rounded-2xl p-6">
-            <div className="text-xs uppercase tracking-widest text-muted-foreground">Difficulty</div>
+            <div className="text-xs uppercase tracking-widest text-muted-foreground">
+              Difficulty
+            </div>
             <div className="mt-3 flex flex-wrap gap-2">
-              {DIFFS.map(d => (
+              {DIFFS.map((d) => (
                 <button
                   key={d}
                   onClick={() => setDiff(d)}

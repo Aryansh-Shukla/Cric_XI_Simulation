@@ -12,35 +12,45 @@ interface Props {
 }
 
 export function Leadership({ players, onBack, onConfirm, teamName, onTeamNameChange }: Props) {
-  const keepers = useMemo(() => players.filter(p => p.role === "Wicketkeeper"), [players]);
+  const keepers = useMemo(() => players.filter((p) => p.role === "Wicketkeeper"), [players]);
   const suggestedCaptain = useMemo(
     () => [...players].sort((a, b) => b.stats.leadership - a.stats.leadership)[0],
     [players],
   );
   const [captainId, setCaptainId] = useState<string>(suggestedCaptain?.id ?? players[0].id);
   const [viceCaptainId, setViceCaptainId] = useState<string>(() => {
-    const others = players.filter(p => p.id !== captainId);
-    return [...others].sort((a, b) => b.stats.leadership - a.stats.leadership)[0]?.id ?? others[0]?.id;
+    const others = players.filter((p) => p.id !== captainId);
+    return (
+      [...others].sort((a, b) => b.stats.leadership - a.stats.leadership)[0]?.id ?? others[0]?.id
+    );
   });
   const [keeperId, setKeeperId] = useState<string>(keepers[0]?.id ?? "");
 
-  const captain = players.find(p => p.id === captainId)!;
-  const eligibleVc = players.filter(p => p.id !== captainId);
+  const captain = players.find((p) => p.id === captainId)!;
+  const eligibleVc = players.filter((p) => p.id !== captainId);
 
   const canConfirm = captainId && viceCaptainId && viceCaptainId !== captainId && keeperId;
 
   return (
     <div className="min-h-screen px-6 py-10">
       <div className="mx-auto max-w-5xl">
-        <button onClick={onBack} className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+        <button
+          onClick={onBack}
+          className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+        >
           <ArrowLeft className="h-4 w-4" /> Back to draft
         </button>
         <div className="text-xs uppercase tracking-widest text-gold">Leadership</div>
         <h2 className="mt-1 text-3xl font-bold md:text-4xl">Appoint your leaders</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Captaincy and the gloves influence pressure moments in the simulation.</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Captaincy and the gloves influence pressure moments in the simulation.
+        </p>
 
         <div className="mt-6 glass-card rounded-2xl p-4">
-          <label htmlFor="team-name" className="text-xs uppercase tracking-widest text-muted-foreground">
+          <label
+            htmlFor="team-name"
+            className="text-xs uppercase tracking-widest text-muted-foreground"
+          >
             Name Your Team
           </label>
           <input
@@ -48,7 +58,7 @@ export function Leadership({ players, onBack, onConfirm, teamName, onTeamNameCha
             type="text"
             value={teamName}
             maxLength={24}
-            onChange={e => onTeamNameChange(e.target.value)}
+            onChange={(e) => onTeamNameChange(e.target.value)}
             placeholder="Your XI"
             className="mt-2 w-full rounded-xl border border-[color:var(--border)] bg-[color:var(--muted)]/30 px-4 py-2.5 text-base outline-none transition-colors placeholder:text-muted-foreground focus:border-[color:var(--gold)]/60 sm:max-w-sm"
           />
@@ -63,10 +73,10 @@ export function Leadership({ players, onBack, onConfirm, teamName, onTeamNameCha
             title="Captain"
             desc="Sets the tempo. Boosts pressure, chemistry, and clutch scenarios."
             selectedId={captainId}
-            onSelect={id => {
+            onSelect={(id) => {
               setCaptainId(id);
               if (viceCaptainId === id) {
-                const other = players.find(p => p.id !== id);
+                const other = players.find((p) => p.id !== id);
                 setViceCaptainId(other?.id ?? "");
               }
             }}
@@ -85,7 +95,11 @@ export function Leadership({ players, onBack, onConfirm, teamName, onTeamNameCha
           <LeaderColumn
             icon={<Shield className="h-4 w-4 text-[color:var(--accent)]" />}
             title="Designated Keeper"
-            desc={keepers.length > 1 ? "Multiple keepers drafted — pick the gloves." : "Only one keeper — automatic."}
+            desc={
+              keepers.length > 1
+                ? "Multiple keepers drafted — pick the gloves."
+                : "Only one keeper — automatic."
+            }
             selectedId={keeperId}
             onSelect={setKeeperId}
             options={keepers}
@@ -96,7 +110,8 @@ export function Leadership({ players, onBack, onConfirm, teamName, onTeamNameCha
 
         <div className="mt-8 flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
-            Captain: <span className="font-semibold text-gold">{captain.name}</span> · Leadership {captain.stats.leadership}
+            Captain: <span className="font-semibold text-gold">{captain.name}</span> · Leadership{" "}
+            {captain.stats.leadership}
           </div>
           <button
             onClick={() => canConfirm && onConfirm({ captainId, viceCaptainId, keeperId })}
@@ -112,7 +127,14 @@ export function Leadership({ players, onBack, onConfirm, teamName, onTeamNameCha
 }
 
 function LeaderColumn({
-  icon, title, desc, options, selectedId, onSelect, accent, disabled,
+  icon,
+  title,
+  desc,
+  options,
+  selectedId,
+  onSelect,
+  accent,
+  disabled,
 }: {
   icon: React.ReactNode;
   title: string;
@@ -130,8 +152,10 @@ function LeaderColumn({
         {icon} {title}
       </div>
       <p className="mt-1 text-[11px] text-muted-foreground">{desc}</p>
-      <div className={`mt-3 max-h-96 space-y-1.5 overflow-y-auto pr-1 ${disabled ? "opacity-60" : ""}`}>
-        {options.map(p => {
+      <div
+        className={`mt-3 max-h-96 space-y-1.5 overflow-y-auto pr-1 ${disabled ? "opacity-60" : ""}`}
+      >
+        {options.map((p) => {
           const active = p.id === selectedId;
           return (
             <motion.button
@@ -145,7 +169,9 @@ function LeaderColumn({
               }`}
             >
               <span className="truncate">{p.name}</span>
-              <span className="ml-2 shrink-0 text-[10px] text-muted-foreground">L{p.stats.leadership}</span>
+              <span className="ml-2 shrink-0 text-[10px] text-muted-foreground">
+                L{p.stats.leadership}
+              </span>
             </motion.button>
           );
         })}

@@ -31,7 +31,8 @@ export function validateCatalog(): ValidationReport {
     if (squadIds.has(squad.id)) errors.push(`Duplicate squad id: ${squad.id}`);
     squadIds.add(squad.id);
 
-    if (!EDITION_BY_ID.has(squad.editionId)) errors.push(`${squad.id}: unknown edition ${squad.editionId}`);
+    if (!EDITION_BY_ID.has(squad.editionId))
+      errors.push(`${squad.id}: unknown edition ${squad.editionId}`);
     if (!TEAM_BY_ID.has(squad.teamId)) errors.push(`${squad.id}: unknown team ${squad.teamId}`);
 
     const seen = new Set<string>();
@@ -52,15 +53,28 @@ export function validateCatalog(): ValidationReport {
       seen.add(profile.playerId);
 
       for (const [key, value] of Object.entries({
-        batting: profile.batting, bowling: profile.bowling, fielding: profile.fielding,
-        wicketkeeping: profile.wicketkeeping, leadership: profile.leadership,
-        pressure: profile.pressure, consistency: profile.consistency,
-        fitness: profile.fitness, form: profile.form, overall: profile.overall,
+        batting: profile.batting,
+        bowling: profile.bowling,
+        fielding: profile.fielding,
+        wicketkeeping: profile.wicketkeeping,
+        leadership: profile.leadership,
+        pressure: profile.pressure,
+        consistency: profile.consistency,
+        fitness: profile.fitness,
+        form: profile.form,
+        overall: profile.overall,
       })) {
-        if (!inRange(value as number | undefined)) errors.push(`${profileId}: ${key}=${value} out of range 1–99`);
+        if (!inRange(value as number | undefined))
+          errors.push(`${profileId}: ${key}=${value} out of range 1–99`);
       }
 
-      const expected = computeOverall(profile.role, profile.batting, profile.bowling, profile.fielding, profile.wicketkeeping);
+      const expected = computeOverall(
+        profile.role,
+        profile.batting,
+        profile.bowling,
+        profile.fielding,
+        profile.wicketkeeping,
+      );
       if (expected !== profile.overall) {
         errors.push(`${profileId}: overall ${profile.overall} ≠ formula ${expected}`);
       }
@@ -74,7 +88,10 @@ export function validateCatalog(): ValidationReport {
       if (profile.bowlingRole === "specialist" && profile.bowling < 40) {
         warnings.push(`${profileId}: specialist bowler with bowling ${profile.bowling}`);
       }
-      if ((profile.role === "PaceBowler" || profile.role === "SpinBowler") && profile.bowlingRole !== "specialist") {
+      if (
+        (profile.role === "PaceBowler" || profile.role === "SpinBowler") &&
+        profile.bowlingRole !== "specialist"
+      ) {
         errors.push(`${profileId}: bowler role without specialist bowlingRole`);
       }
 
@@ -97,12 +114,12 @@ export function validateCatalog(): ValidationReport {
     if (ids.length > 1) errors.push(`Canonical name "${name}" maps to ${ids.length} ids`);
   }
 
-  const competitions = new Set(SQUAD_REGISTRY.map(s => s.competitionId));
-  const coverage = [...competitions].map(competitionId => {
-    const squads = SQUAD_REGISTRY.filter(s => s.competitionId === competitionId);
+  const competitions = new Set(SQUAD_REGISTRY.map((s) => s.competitionId));
+  const coverage = [...competitions].map((competitionId) => {
+    const squads = SQUAD_REGISTRY.filter((s) => s.competitionId === competitionId);
     return {
       competitionId,
-      editions: new Set(squads.map(s => s.editionId)).size,
+      editions: new Set(squads.map((s) => s.editionId)).size,
       squads: squads.length,
     };
   });
@@ -113,7 +130,7 @@ export function validateCatalog(): ValidationReport {
       players: PLAYER_REGISTRY.size,
       profiles: PROFILE_REGISTRY.size,
       squads: SQUAD_REGISTRY.length,
-      editions: new Set(SQUAD_REGISTRY.map(s => s.editionId)).size,
+      editions: new Set(SQUAD_REGISTRY.map((s) => s.editionId)).size,
       competitions: competitions.size,
     },
     errors,
@@ -139,11 +156,12 @@ export function logValidationReport() {
   const { counts } = report;
   console.groupCollapsed(
     `[Cricket XI] catalogue ${report.ok ? "OK" : "FAILED"} — ` +
-    `${counts.players} players · ${counts.profiles} profiles · ${counts.squads} squads · ${counts.editions} editions`,
+      `${counts.players} players · ${counts.profiles} profiles · ${counts.squads} squads · ${counts.editions} editions`,
   );
   console.table(report.coverage);
   if (report.errors.length) console.error(report.errors);
-  if (report.warnings.length) console.warn(`${report.warnings.length} warnings`, report.warnings.slice(0, 20));
+  if (report.warnings.length)
+    console.warn(`${report.warnings.length} warnings`, report.warnings.slice(0, 20));
   console.groupEnd();
   return report;
 }

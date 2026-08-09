@@ -19,7 +19,7 @@ export const PlayerEligibilityService = {
   filterEligible(candidates: Player[], picked: Player[]): Player[] {
     const used = this.draftedCanonicalIds(picked);
     const seen = new Set<string>();
-    return candidates.filter(p => {
+    return candidates.filter((p) => {
       const id = canonicalIdOf(p);
       if (used.has(id) || seen.has(id)) return false;
       seen.add(id);

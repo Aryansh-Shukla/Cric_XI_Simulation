@@ -4,31 +4,55 @@ import { Play, Calendar, Trophy, HelpCircle, Users, Github } from "lucide-react"
 import { HowToPlay } from "./HowToPlay";
 import { listChampions } from "@/lib/cricket/champions";
 
-interface Props { onPlay: () => void; }
+interface Props {
+  onPlay: () => void;
+}
 
 export function Landing({ onPlay }: Props) {
   const [howToOpen, setHowToOpen] = useState(false);
   const [champions] = useState(() => listChampions(3));
   return (
     <div className="relative min-h-screen overflow-hidden">
-      <div className="pointer-events-none absolute inset-0" style={{ background: "var(--gradient-hero)" }} />
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{ background: "var(--gradient-hero)" }}
+      />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,oklch(0.78_0.14_85/.15),transparent_60%)]" />
 
       <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col items-center justify-center px-6 py-16">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="flex flex-col items-center text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="flex flex-col items-center text-center"
+        >
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[color:var(--gold)]/30 bg-[color:var(--card)]/60 px-4 py-1.5 text-xs uppercase tracking-[0.2em] text-gold backdrop-blur">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[color:var(--accent)]" />
             Season 1 · Live
           </div>
           <h1 className="text-6xl font-black tracking-tight md:text-8xl">
-            <span className="bg-gradient-to-b from-white to-white/60 bg-clip-text text-transparent">Cricket</span>{" "}
-            <span className="bg-[image:var(--gradient-gold)] bg-clip-text text-transparent">XI</span>
+            <span className="bg-gradient-to-b from-white to-white/60 bg-clip-text text-transparent">
+              Cricket
+            </span>{" "}
+            <span className="bg-[image:var(--gradient-gold)] bg-clip-text text-transparent">
+              XI
+            </span>
           </h1>
-          <p className="mt-4 text-lg text-muted-foreground md:text-2xl">Draft Legends. Build Dynasties.</p>
+          <p className="mt-4 text-lg text-muted-foreground md:text-2xl">
+            Draft Legends. Build Dynasties.
+          </p>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.6 }} className="mt-10 flex flex-wrap items-center justify-center gap-3">
-          <button onClick={onPlay} className="btn-gold inline-flex items-center gap-2 rounded-full px-6 py-3 text-base font-semibold">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15, duration: 0.6 }}
+          className="mt-10 flex flex-wrap items-center justify-center gap-3"
+        >
+          <button
+            onClick={onPlay}
+            className="btn-gold inline-flex items-center gap-2 rounded-full px-6 py-3 text-base font-semibold"
+          >
             <Play className="h-4 w-4" /> Play Now
           </button>
           <button
@@ -38,7 +62,9 @@ export function Landing({ onPlay }: Props) {
             className="btn-ghost-gold inline-flex cursor-not-allowed items-center gap-2 rounded-full px-5 py-3 text-sm font-medium opacity-50"
           >
             <Calendar className="h-4 w-4" /> Daily Challenge
-            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wider">Coming Soon</span>
+            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wider">
+              Coming Soon
+            </span>
           </button>
           <button
             type="button"
@@ -47,7 +73,9 @@ export function Landing({ onPlay }: Props) {
             className="btn-ghost-gold inline-flex cursor-not-allowed items-center gap-2 rounded-full px-5 py-3 text-sm font-medium opacity-50"
           >
             <Trophy className="h-4 w-4" /> Leaderboard
-            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wider">Coming Soon</span>
+            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wider">
+              Coming Soon
+            </span>
           </button>
           <button
             type="button"
@@ -60,13 +88,21 @@ export function Landing({ onPlay }: Props) {
 
         <HowToPlay open={howToOpen} onOpenChange={setHowToOpen} />
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.6 }} className="mt-14 w-full max-w-3xl">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.6 }}
+          className="mt-14 w-full max-w-3xl"
+        >
           <div className="mb-3 flex items-center gap-2 px-2 text-xs uppercase tracking-widest text-muted-foreground">
             <Users className="h-3.5 w-3.5" /> Recent Champions
           </div>
           <div className="glass-card grid gap-2 rounded-2xl p-2">
             {champions.map((c) => (
-              <div key={c.id} className="flex items-center justify-between gap-3 rounded-xl px-4 py-3 hover:bg-white/5">
+              <div
+                key={c.id}
+                className="flex items-center justify-between gap-3 rounded-xl px-4 py-3 hover:bg-white/5"
+              >
                 <div className="flex min-w-0 items-center gap-3">
                   <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[color:var(--gold)]/10 text-sm text-gold">
                     🏆
@@ -79,7 +115,10 @@ export function Landing({ onPlay }: Props) {
                 <div className="shrink-0 text-right">
                   <div className="text-xs font-semibold text-gold">{c.score.toLocaleString()}</div>
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                    {new Date(c.date).toLocaleDateString(undefined, { month: "short", year: "numeric" })}
+                    {new Date(c.date).toLocaleDateString(undefined, {
+                      month: "short",
+                      year: "numeric",
+                    })}
                   </div>
                 </div>
               </div>
@@ -92,7 +131,9 @@ export function Landing({ onPlay }: Props) {
             Fictional draft simulator · No affiliation with any cricket board.
           </div>
           <div className="mt-4 text-sm font-medium">Built by Aryansh Shukla</div>
-          <div className="mt-1 text-[11px] uppercase tracking-widest text-muted-foreground">Let&apos;s Connect</div>
+          <div className="mt-1 text-[11px] uppercase tracking-widest text-muted-foreground">
+            Let&apos;s Connect
+          </div>
           <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
             <a
               href="https://github.com/Aryansh-Shukla"

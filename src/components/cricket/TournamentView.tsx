@@ -1,15 +1,39 @@
 import { Component, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Trophy, CloudRain, Sun, Cloud, Moon, ArrowRight, RotateCcw, MapPin, Coins,
-  Play, FileText, BarChart3, ListOrdered, AlertTriangle,
+  Trophy,
+  CloudRain,
+  Sun,
+  Cloud,
+  Moon,
+  ArrowRight,
+  RotateCcw,
+  MapPin,
+  Coins,
+  Play,
+  FileText,
+  BarChart3,
+  ListOrdered,
+  AlertTriangle,
 } from "lucide-react";
 import type {
-  GameMode, Player, Weather, MatchResult, LimitedScorecard, TestScorecard, Innings, PlayerAgg,
+  GameMode,
+  Player,
+  Weather,
+  MatchResult,
+  LimitedScorecard,
+  TestScorecard,
+  Innings,
+  PlayerAgg,
 } from "@/lib/cricket/types";
 import {
-  createTournament, advanceTournament, topRunScorers, topWicketTakers,
-  standingsTable, netRunRate, campaignAwards,
+  createTournament,
+  advanceTournament,
+  topRunScorers,
+  topWicketTakers,
+  standingsTable,
+  netRunRate,
+  campaignAwards,
   type TournamentState,
 } from "@/lib/cricket/tournament";
 import { MODE_LABELS } from "@/lib/cricket/data";
@@ -27,10 +51,14 @@ interface Props {
 
 const weatherIcon = (w: Weather) => {
   switch (w) {
-    case "Sunny": return Sun;
-    case "Cloudy": return Cloud;
-    case "Humid": return CloudRain;
-    case "Night Match": return Moon;
+    case "Sunny":
+      return Sun;
+    case "Cloudy":
+      return Cloud;
+    case "Humid":
+      return CloudRain;
+    case "Night Match":
+      return Moon;
   }
 };
 
@@ -38,13 +66,22 @@ const isLimited = (r: MatchResult): r is LimitedScorecard =>
   r.format === "T20" || r.format === "ODI";
 const isTest = (r: MatchResult): r is TestScorecard => r.format === "TEST";
 
-function formatOvers(o: number) { return o.toFixed(1); }
+function formatOvers(o: number) {
+  return o.toFixed(1);
+}
 
 /* ---------- Error boundary ---------- */
-class TournamentBoundary extends Component<{ children: ReactNode; onRestart: () => void }, { err: Error | null }> {
+class TournamentBoundary extends Component<
+  { children: ReactNode; onRestart: () => void },
+  { err: Error | null }
+> {
   state = { err: null as Error | null };
-  static getDerivedStateFromError(err: Error) { return { err }; }
-  componentDidCatch(err: Error) { console.error("[tournament]", err); }
+  static getDerivedStateFromError(err: Error) {
+    return { err };
+  }
+  componentDidCatch(err: Error) {
+    console.error("[tournament]", err);
+  }
   render() {
     if (this.state.err) {
       return (
@@ -52,7 +89,10 @@ class TournamentBoundary extends Component<{ children: ReactNode; onRestart: () 
           <AlertTriangle className="mx-auto h-10 w-10 text-[color:var(--destructive)]" />
           <h3 className="mt-4 text-2xl font-bold">Tournament crashed</h3>
           <p className="mt-2 text-sm text-muted-foreground">{this.state.err.message}</p>
-          <button onClick={this.props.onRestart} className="btn-gold mt-6 inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold">
+          <button
+            onClick={this.props.onRestart}
+            className="btn-gold mt-6 inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold"
+          >
             Start Over <ArrowRight className="h-4 w-4" />
           </button>
         </div>
@@ -108,7 +148,7 @@ function TournamentInner({ players, mode, leadership, teamName, onRestart }: Pro
     setBusy(true);
     // Yield to allow spinner paint before heavy sim
     setTimeout(() => {
-      setState(prev => advanceTournament(prev));
+      setState((prev) => advanceTournament(prev));
       setBusy(false);
     }, 60);
   };
@@ -121,9 +161,27 @@ function TournamentInner({ players, mode, leadership, teamName, onRestart }: Pro
         <StageTimeline state={state} />
 
         <div className="mt-6 flex flex-wrap gap-2">
-          <TabButton active={tab === "matches"} onClick={() => setTab("matches")} icon={<Play className="h-3.5 w-3.5" />}>Matches</TabButton>
-          <TabButton active={tab === "leaders"} onClick={() => setTab("leaders")} icon={<BarChart3 className="h-3.5 w-3.5" />}>Leaders</TabButton>
-          <TabButton active={tab === "standings"} onClick={() => setTab("standings")} icon={<ListOrdered className="h-3.5 w-3.5" />}>Standings</TabButton>
+          <TabButton
+            active={tab === "matches"}
+            onClick={() => setTab("matches")}
+            icon={<Play className="h-3.5 w-3.5" />}
+          >
+            Matches
+          </TabButton>
+          <TabButton
+            active={tab === "leaders"}
+            onClick={() => setTab("leaders")}
+            icon={<BarChart3 className="h-3.5 w-3.5" />}
+          >
+            Leaders
+          </TabButton>
+          <TabButton
+            active={tab === "standings"}
+            onClick={() => setTab("standings")}
+            icon={<ListOrdered className="h-3.5 w-3.5" />}
+          >
+            Standings
+          </TabButton>
         </div>
 
         <div className="mt-4 space-y-4">
@@ -137,26 +195,24 @@ function TournamentInner({ players, mode, leadership, teamName, onRestart }: Pro
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     transition={{ duration: 0.4 }}
                   >
-                    {isLimited(r)
-                      ? <LimitedCard r={r} onView={() => setScorecard(r)} />
-                      : <TestCard r={r as TestScorecard} onView={() => setScorecard(r)} />}
+                    {isLimited(r) ? (
+                      <LimitedCard r={r} onView={() => setScorecard(r)} />
+                    ) : (
+                      <TestCard r={r as TestScorecard} onView={() => setScorecard(r)} />
+                    )}
                   </motion.div>
                 ))}
               </AnimatePresence>
 
-              {!done && nextFixture && (
-                <NextMatchCard
-                  state={state}
-                  onPlay={play}
-                  busy={busy}
-                />
-              )}
+              {!done && nextFixture && <NextMatchCard state={state} onPlay={play} busy={busy} />}
 
               {done && <FinaleCard state={state} mode={mode} onRestart={onRestart} />}
             </>
           )}
 
-          {tab === "leaders" && <LeadersPanel runScorers={runScorers} wicketTakers={wicketTakers} />}
+          {tab === "leaders" && (
+            <LeadersPanel runScorers={runScorers} wicketTakers={wicketTakers} />
+          )}
           {tab === "standings" && <StandingsPanel state={state} />}
         </div>
       </div>
@@ -167,7 +223,15 @@ function TournamentInner({ players, mode, leadership, teamName, onRestart }: Pro
 }
 
 /* ---------- Header ---------- */
-function Header({ state, mode, onRestart }: { state: TournamentState; mode: GameMode; onRestart: () => void }) {
+function Header({
+  state,
+  mode,
+  onRestart,
+}: {
+  state: TournamentState;
+  mode: GameMode;
+  onRestart: () => void;
+}) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-4">
       <div>
@@ -180,10 +244,16 @@ function Header({ state, mode, onRestart }: { state: TournamentState; mode: Game
           <span className="mx-2 opacity-40">·</span>
           Team Rating <span className="text-gold">{state.teamRatingSnapshot}</span>
           <span className="mx-2 opacity-40">·</span>
-          Record <span className="text-foreground">{state.wins}W – {state.losses}L{state.draws ? ` – ${state.draws}D` : ""}</span>
+          Record{" "}
+          <span className="text-foreground">
+            {state.wins}W – {state.losses}L{state.draws ? ` – ${state.draws}D` : ""}
+          </span>
         </p>
       </div>
-      <button onClick={onRestart} className="btn-ghost-gold inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm">
+      <button
+        onClick={onRestart}
+        className="btn-ghost-gold inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm"
+      >
         <RotateCcw className="h-4 w-4" /> New Draft
       </button>
     </div>
@@ -191,7 +261,17 @@ function Header({ state, mode, onRestart }: { state: TournamentState; mode: Game
 }
 
 /* ---------- Tabs ---------- */
-function TabButton({ active, onClick, icon, children }: { active: boolean; onClick: () => void; icon: ReactNode; children: ReactNode }) {
+function TabButton({
+  active,
+  onClick,
+  icon,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: ReactNode;
+  children: ReactNode;
+}) {
   return (
     <button
       onClick={onClick}
@@ -207,7 +287,15 @@ function TabButton({ active, onClick, icon, children }: { active: boolean; onCli
 }
 
 /* ---------- Next Match ---------- */
-function NextMatchCard({ state, onPlay, busy }: { state: TournamentState; onPlay: () => void; busy: boolean }) {
+function NextMatchCard({
+  state,
+  onPlay,
+  busy,
+}: {
+  state: TournamentState;
+  onPlay: () => void;
+  busy: boolean;
+}) {
   const fx = state.fixtures[state.currentIndex];
   if (!fx) return null;
   return (
@@ -219,7 +307,9 @@ function NextMatchCard({ state, onPlay, busy }: { state: TournamentState; onPlay
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="text-xs uppercase tracking-widest text-gold">Up Next · {fx.stage}</div>
-          <h3 className="mt-1 text-2xl font-bold">{state.ourName} <span className="text-muted-foreground">vs</span> {fx.opponent.name}</h3>
+          <h3 className="mt-1 text-2xl font-bold">
+            {state.ourName} <span className="text-muted-foreground">vs</span> {fx.opponent.name}
+          </h3>
           <p className="mt-1 text-sm text-muted-foreground">
             Opponent rating <span className="text-foreground">{fx.opponent.rating}</span>
             <span className="mx-2 opacity-40">·</span>
@@ -237,7 +327,9 @@ function NextMatchCard({ state, onPlay, busy }: { state: TournamentState; onPlay
               Simulating…
             </>
           ) : (
-            <>Simulate Match <ArrowRight className="h-4 w-4" /></>
+            <>
+              Simulate Match <ArrowRight className="h-4 w-4" />
+            </>
           )}
         </button>
       </div>
@@ -246,7 +338,15 @@ function NextMatchCard({ state, onPlay, busy }: { state: TournamentState; onPlay
 }
 
 /* ---------- Finale ---------- */
-function FinaleCard({ state, mode, onRestart }: { state: TournamentState; mode: GameMode; onRestart: () => void }) {
+function FinaleCard({
+  state,
+  mode,
+  onRestart,
+}: {
+  state: TournamentState;
+  mode: GameMode;
+  onRestart: () => void;
+}) {
   const won = state.championshipWon;
   return (
     <motion.div
@@ -261,7 +361,9 @@ function FinaleCard({ state, mode, onRestart }: { state: TournamentState; mode: 
           ? "Champions!"
           : state.eliminated
             ? `Knocked out at the ${state.eliminatedAt}`
-            : mode === "TEST" ? "Series Complete" : "Campaign Over"}
+            : mode === "TEST"
+              ? "Series Complete"
+              : "Campaign Over"}
       </h3>
       <p className="mt-2 text-muted-foreground">
         {won
@@ -280,7 +382,10 @@ function FinaleCard({ state, mode, onRestart }: { state: TournamentState; mode: 
       )}
       <CampaignAwards state={state} />
       <div className="mt-6 flex justify-center gap-2">
-        <button onClick={onRestart} className="btn-gold inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold">
+        <button
+          onClick={onRestart}
+          className="btn-gold inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold"
+        >
           Play Again <ArrowRight className="h-4 w-4" />
         </button>
       </div>
@@ -296,28 +401,37 @@ function CampaignAwards({ state }: { state: TournamentState }) {
   return (
     <div className="mt-6 grid gap-3 text-left sm:grid-cols-2">
       <div className="rounded-2xl border border-[color:var(--border)] bg-white/[0.03] p-4">
-        <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Best Batter</div>
+        <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+          Best Batter
+        </div>
         {batter ? (
           <>
             <div className="mt-1 text-base font-semibold text-gold">{batter.name}</div>
             <div className="mt-1 text-xs text-muted-foreground">
               {batter.runs} runs · Avg {batter.average} · SR {batter.strikeRate}
             </div>
-            <div className="mt-1 text-xs font-medium">{rankLabel(batter.rank)} <span className="text-muted-foreground">in Most Runs</span></div>
+            <div className="mt-1 text-xs font-medium">
+              {rankLabel(batter.rank)} <span className="text-muted-foreground">in Most Runs</span>
+            </div>
           </>
         ) : (
           <div className="mt-1 text-xs text-muted-foreground">No runs recorded.</div>
         )}
       </div>
       <div className="rounded-2xl border border-[color:var(--border)] bg-white/[0.03] p-4">
-        <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Best Bowler</div>
+        <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+          Best Bowler
+        </div>
         {bowler ? (
           <>
             <div className="mt-1 text-base font-semibold text-gold">{bowler.name}</div>
             <div className="mt-1 text-xs text-muted-foreground">
               {bowler.wickets} wickets · Econ {bowler.economy}
             </div>
-            <div className="mt-1 text-xs font-medium">{rankLabel(bowler.rank)} <span className="text-muted-foreground">in Most Wickets</span></div>
+            <div className="mt-1 text-xs font-medium">
+              {rankLabel(bowler.rank)}{" "}
+              <span className="text-muted-foreground">in Most Wickets</span>
+            </div>
           </>
         ) : (
           <div className="mt-1 text-xs text-muted-foreground">No wickets recorded.</div>
@@ -333,7 +447,13 @@ function CampaignAwards({ state }: { state: TournamentState }) {
   );
 }
 
-function LeadersPanel({ runScorers, wicketTakers }: { runScorers: PlayerAgg[]; wicketTakers: PlayerAgg[] }) {
+function LeadersPanel({
+  runScorers,
+  wicketTakers,
+}: {
+  runScorers: PlayerAgg[];
+  wicketTakers: PlayerAgg[];
+}) {
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <LeaderTable title="Most Runs" rows={runScorers} kind="bat" />
@@ -342,14 +462,24 @@ function LeadersPanel({ runScorers, wicketTakers }: { runScorers: PlayerAgg[]; w
   );
 }
 
-function LeaderTable({ title, rows, kind }: { title: string; rows: PlayerAgg[]; kind: "bat" | "bowl" }) {
+function LeaderTable({
+  title,
+  rows,
+  kind,
+}: {
+  title: string;
+  rows: PlayerAgg[];
+  kind: "bat" | "bowl";
+}) {
   return (
     <div className="glass-card overflow-hidden rounded-2xl">
       <div className="border-b border-[color:var(--border)] px-4 py-3">
         <div className="text-xs uppercase tracking-widest text-gold">{title}</div>
       </div>
       {rows.length === 0 ? (
-        <div className="p-6 text-center text-xs text-muted-foreground">No data yet — play a match.</div>
+        <div className="p-6 text-center text-xs text-muted-foreground">
+          No data yet — play a match.
+        </div>
       ) : (
         <table className="w-full text-xs">
           <thead className="bg-white/5 text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -373,7 +503,9 @@ function LeaderTable({ title, rows, kind }: { title: string; rows: PlayerAgg[]; 
           <tbody>
             {rows.map((p, i) => {
               const sr = p.balls ? Math.round((p.runs * 100) / p.balls) : 0;
-              const econ = p.ballsBowled ? Math.round((p.runsConceded * 6 / p.ballsBowled) * 100) / 100 : 0;
+              const econ = p.ballsBowled
+                ? Math.round(((p.runsConceded * 6) / p.ballsBowled) * 100) / 100
+                : 0;
               return (
                 <tr
                   key={i}
@@ -382,7 +514,11 @@ function LeaderTable({ title, rows, kind }: { title: string; rows: PlayerAgg[]; 
                   <td className="px-3 py-1.5">
                     <span className={p.isOurs ? "font-semibold text-gold" : ""}>{p.name}</span>
                   </td>
-                  <td className={`px-3 py-1.5 ${p.isOurs ? "text-gold/80" : "text-muted-foreground"}`}>{p.team}</td>
+                  <td
+                    className={`px-3 py-1.5 ${p.isOurs ? "text-gold/80" : "text-muted-foreground"}`}
+                  >
+                    {p.team}
+                  </td>
                   <td className="px-3 py-1.5 text-right">{p.matches}</td>
                   {kind === "bat" ? (
                     <>
@@ -415,7 +551,9 @@ function StandingsPanel({ state }: { state: TournamentState }) {
         <div className="text-xs uppercase tracking-widest text-gold">Standings</div>
       </div>
       {rows.length === 0 ? (
-        <div className="p-6 text-center text-xs text-muted-foreground">Play a match to populate the table.</div>
+        <div className="p-6 text-center text-xs text-muted-foreground">
+          Play a match to populate the table.
+        </div>
       ) : (
         <table className="w-full text-xs">
           <thead className="bg-white/5 text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -437,12 +575,15 @@ function StandingsPanel({ state }: { state: TournamentState }) {
                   className={`border-t border-[color:var(--border)]/40 ${r.isOurs ? "bg-[color:var(--gold)]/10" : ""}`}
                 >
                   <td className={`px-3 py-1.5 ${r.isOurs ? "font-semibold text-gold" : ""}`}>
-                    <span className="mr-2 text-muted-foreground">{i + 1}</span>{r.name}
+                    <span className="mr-2 text-muted-foreground">{i + 1}</span>
+                    {r.name}
                   </td>
                   <td className="px-3 py-1.5 text-right">{r.played}</td>
                   <td className="px-3 py-1.5 text-right">{r.wins}</td>
                   <td className="px-3 py-1.5 text-right">{r.losses}</td>
-                  <td className="px-3 py-1.5 text-right">{nrr > 0 ? `+${nrr.toFixed(2)}` : nrr.toFixed(2)}</td>
+                  <td className="px-3 py-1.5 text-right">
+                    {nrr > 0 ? `+${nrr.toFixed(2)}` : nrr.toFixed(2)}
+                  </td>
                   <td className="px-3 py-1.5 text-right font-semibold">{r.points}</td>
                 </tr>
               );
@@ -458,24 +599,34 @@ function StandingsPanel({ state }: { state: TournamentState }) {
 function StageTimeline({ state }: { state: TournamentState }) {
   // Drive the timeline from the live bracket, not the provisional stage list —
   // e.g. winning Qualifier 1 removes Qualifier 2 and shows the Final next.
-  const stages = state.fixtures.map(f => f.stage);
+  const stages = state.fixtures.map((f) => f.stage);
   return (
     <div className="mt-6 flex flex-wrap gap-1.5">
       {stages.map((s, i) => {
         const r = state.results[i];
         const played = i < state.results.length && r;
         const outcome = played
-          ? isTest(r!) ? r!.result : (r as LimitedScorecard).weWon ? "WON" : "LOST"
+          ? isTest(r!)
+            ? r!.result
+            : (r as LimitedScorecard).weWon
+              ? "WON"
+              : "LOST"
           : null;
         const color =
-          outcome === "WON" ? "border-[color:var(--accent)]/50 bg-[color:var(--accent)]/10 text-[color:var(--accent)]"
-          : outcome === "LOST" ? "border-[color:var(--destructive)]/50 bg-[color:var(--destructive)]/10 text-[color:var(--destructive)]"
-          : outcome === "DRAW" ? "border-white/20 bg-white/5"
-          : i === state.currentIndex && !state.complete
-            ? "border-[color:var(--gold)]/60 bg-[color:var(--gold)]/10 text-gold animate-pulse"
-            : "border-[color:var(--border)] bg-[color:var(--muted)]/40 text-muted-foreground";
+          outcome === "WON"
+            ? "border-[color:var(--accent)]/50 bg-[color:var(--accent)]/10 text-[color:var(--accent)]"
+            : outcome === "LOST"
+              ? "border-[color:var(--destructive)]/50 bg-[color:var(--destructive)]/10 text-[color:var(--destructive)]"
+              : outcome === "DRAW"
+                ? "border-white/20 bg-white/5"
+                : i === state.currentIndex && !state.complete
+                  ? "border-[color:var(--gold)]/60 bg-[color:var(--gold)]/10 text-gold animate-pulse"
+                  : "border-[color:var(--border)] bg-[color:var(--muted)]/40 text-muted-foreground";
         return (
-          <span key={i} className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${color}`}>
+          <span
+            key={i}
+            className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${color}`}
+          >
             {s}
           </span>
         );
@@ -495,8 +646,18 @@ function SuperOverStrip({ r }: { r: LimitedScorecard }) {
     <div className="border-t border-[color:var(--gold)]/30 bg-[color:var(--gold)]/5 px-5 py-3">
       <div className="text-[10px] uppercase tracking-widest text-gold">Match tied · Super Over</div>
       <div className="mt-1 flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
-        <span>{so.ours.teamName} <span className="font-bold">{so.ours.runs}/{so.ours.wickets}</span></span>
-        <span>{so.opp.teamName} <span className="font-bold">{so.opp.runs}/{so.opp.wickets}</span></span>
+        <span>
+          {so.ours.teamName}{" "}
+          <span className="font-bold">
+            {so.ours.runs}/{so.ours.wickets}
+          </span>
+        </span>
+        <span>
+          {so.opp.teamName}{" "}
+          <span className="font-bold">
+            {so.opp.runs}/{so.opp.wickets}
+          </span>
+        </span>
         <span className="text-gold">{so.winner} won the Super Over</span>
       </div>
     </div>
@@ -505,19 +666,29 @@ function SuperOverStrip({ r }: { r: LimitedScorecard }) {
 
 function LimitedCardInner({ r, onView }: { r: LimitedScorecard; onView: () => void }) {
   const WIcon = weatherIcon(r.weather);
-  const ringClass = r.weWon ? "ring-1 ring-[color:var(--accent)]/40" : "ring-1 ring-[color:var(--destructive)]/40";
+  const ringClass = r.weWon
+    ? "ring-1 ring-[color:var(--accent)]/40"
+    : "ring-1 ring-[color:var(--destructive)]/40";
   const tossText = `${r.toss.winner === "us" ? r.ourName : r.oppName} won toss · chose to ${r.toss.decision}`;
 
   return (
     <div className={`glass-card overflow-hidden rounded-2xl ${ringClass}`}>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--border)] px-5 py-3">
         <div className="flex items-center gap-3">
-          <span className="rounded-full bg-[color:var(--gold)]/10 px-2.5 py-0.5 text-xs font-semibold text-gold">{r.stage}</span>
-          <span className="text-sm text-muted-foreground">{r.format} · vs {r.oppName}</span>
+          <span className="rounded-full bg-[color:var(--gold)]/10 px-2.5 py-0.5 text-xs font-semibold text-gold">
+            {r.stage}
+          </span>
+          <span className="text-sm text-muted-foreground">
+            {r.format} · vs {r.oppName}
+          </span>
         </div>
         <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {r.venue}</span>
-          <span className="inline-flex items-center gap-1"><WIcon className="h-3.5 w-3.5" /> {r.weather}</span>
+          <span className="inline-flex items-center gap-1">
+            <MapPin className="h-3.5 w-3.5" /> {r.venue}
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <WIcon className="h-3.5 w-3.5" /> {r.weather}
+          </span>
           <span>Pitch: {r.pitch}</span>
         </div>
       </div>
@@ -525,7 +696,9 @@ function LimitedCardInner({ r, onView }: { r: LimitedScorecard; onView: () => vo
       <div className="grid gap-6 p-5 md:grid-cols-[1fr,auto,1fr]">
         <InningsBlock title={r.ourName} innings={r.ourInnings} highlight={r.weWon} />
         <div className="flex flex-col items-center justify-center gap-1">
-          <div className={`text-2xl font-black ${r.weWon ? "text-[color:var(--accent)]" : "text-[color:var(--destructive)]"}`}>
+          <div
+            className={`text-2xl font-black ${r.weWon ? "text-[color:var(--accent)]" : "text-[color:var(--destructive)]"}`}
+          >
             {r.weWon ? "WON" : "LOST"}
           </div>
           <div className="text-[10px] uppercase tracking-widest text-muted-foreground text-center max-w-[9rem]">
@@ -542,17 +715,28 @@ function LimitedCardInner({ r, onView }: { r: LimitedScorecard; onView: () => vo
       </div>
 
       <div className="grid gap-3 border-t border-[color:var(--border)] px-5 py-4 md:grid-cols-3">
-        <Meta label={`${r.ourInnings.teamName} top`} value={`${r.ourInnings.topScorer.name} · ${r.ourInnings.topScorer.runs} (${r.ourInnings.topScorer.balls})`} />
-        <Meta label="Best bowler" value={`${bestOverallBowler(r).name} · ${bestOverallBowler(r).wickets}/${bestOverallBowler(r).runs}`} />
+        <Meta
+          label={`${r.ourInnings.teamName} top`}
+          value={`${r.ourInnings.topScorer.name} · ${r.ourInnings.topScorer.runs} (${r.ourInnings.topScorer.balls})`}
+        />
+        <Meta
+          label="Best bowler"
+          value={`${bestOverallBowler(r).name} · ${bestOverallBowler(r).wickets}/${bestOverallBowler(r).runs}`}
+        />
         <Meta label="Player of the Match" value={r.playerOfMatch} accent />
       </div>
 
       <ul className="space-y-1 border-t border-[color:var(--border)] px-5 py-3 text-sm text-muted-foreground">
-        {r.highlights.map((h, k) => <li key={k}>• {h}</li>)}
+        {r.highlights.map((h, k) => (
+          <li key={k}>• {h}</li>
+        ))}
       </ul>
 
       <div className="flex justify-end border-t border-[color:var(--border)] px-5 py-3">
-        <button onClick={onView} className="btn-ghost-gold inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs">
+        <button
+          onClick={onView}
+          className="btn-ghost-gold inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs"
+        >
           <FileText className="h-3.5 w-3.5" /> View Scorecard
         </button>
       </div>
@@ -566,13 +750,25 @@ function bestOverallBowler(r: LimitedScorecard) {
   return a.wickets >= b.wickets ? a : b;
 }
 
-function InningsBlock({ title, innings, highlight, align = "left" }: { title: string; innings: Innings; highlight: boolean; align?: "left" | "right" }) {
+function InningsBlock({
+  title,
+  innings,
+  highlight,
+  align = "left",
+}: {
+  title: string;
+  innings: Innings;
+  highlight: boolean;
+  align?: "left" | "right";
+}) {
   return (
     <div className={align === "right" ? "text-right" : ""}>
       <div className="text-xs uppercase tracking-widest text-muted-foreground">{title}</div>
       <div className={`mt-1 text-2xl font-bold ${highlight ? "text-gold" : ""}`}>
         {innings.runs}/{innings.wickets}
-        <span className="ml-1 text-sm font-normal text-muted-foreground">({formatOvers(innings.overs)})</span>
+        <span className="ml-1 text-sm font-normal text-muted-foreground">
+          ({formatOvers(innings.overs)})
+        </span>
       </div>
       <div className="mt-0.5 text-[11px] text-muted-foreground">RR {innings.runRate}</div>
     </div>
@@ -582,24 +778,34 @@ function InningsBlock({ title, innings, highlight, align = "left" }: { title: st
 function TestCard({ r, onView }: { r: TestScorecard; onView: () => void }) {
   const WIcon = weatherIcon(r.weather);
   const ringClass =
-    r.result === "WON" ? "ring-1 ring-[color:var(--accent)]/40"
-    : r.result === "LOST" ? "ring-1 ring-[color:var(--destructive)]/40"
-    : "ring-1 ring-white/10";
+    r.result === "WON"
+      ? "ring-1 ring-[color:var(--accent)]/40"
+      : r.result === "LOST"
+        ? "ring-1 ring-[color:var(--destructive)]/40"
+        : "ring-1 ring-white/10";
   const outcomeColor =
-    r.result === "WON" ? "text-[color:var(--accent)]"
-    : r.result === "LOST" ? "text-[color:var(--destructive)]"
-    : "text-foreground";
+    r.result === "WON"
+      ? "text-[color:var(--accent)]"
+      : r.result === "LOST"
+        ? "text-[color:var(--destructive)]"
+        : "text-foreground";
 
   return (
     <div className={`glass-card overflow-hidden rounded-2xl ${ringClass}`}>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--border)] px-5 py-3">
         <div className="flex items-center gap-3">
-          <span className="rounded-full bg-[color:var(--gold)]/10 px-2.5 py-0.5 text-xs font-semibold text-gold">{r.stage}</span>
+          <span className="rounded-full bg-[color:var(--gold)]/10 px-2.5 py-0.5 text-xs font-semibold text-gold">
+            {r.stage}
+          </span>
           <span className="text-sm text-muted-foreground">TEST · vs {r.oppName}</span>
         </div>
         <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {r.venue}</span>
-          <span className="inline-flex items-center gap-1"><WIcon className="h-3.5 w-3.5" /> {r.weather}</span>
+          <span className="inline-flex items-center gap-1">
+            <MapPin className="h-3.5 w-3.5" /> {r.venue}
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <WIcon className="h-3.5 w-3.5" /> {r.weather}
+          </span>
           <span>Pitch: {r.pitch}</span>
         </div>
       </div>
@@ -612,21 +818,37 @@ function TestCard({ r, onView }: { r: TestScorecard; onView: () => void }) {
             {r.marginText}
           </div>
         </div>
-        <TestSide title={r.oppName} innings={r.oppInnings} highlight={r.result === "LOST"} align="right" />
+        <TestSide
+          title={r.oppName}
+          innings={r.oppInnings}
+          highlight={r.result === "LOST"}
+          align="right"
+        />
       </div>
 
       <div className="grid gap-3 border-t border-[color:var(--border)] px-5 py-4 md:grid-cols-3">
-        <Meta label="Top scorer" value={`${r.ourInnings[0].topScorer.name} · ${r.ourInnings[0].topScorer.runs}`} />
-        <Meta label="Best bowler" value={`${r.oppInnings[0].bestBowler.name} · ${r.oppInnings[0].bestBowler.wickets}/${r.oppInnings[0].bestBowler.runs}`} />
+        <Meta
+          label="Top scorer"
+          value={`${r.ourInnings[0].topScorer.name} · ${r.ourInnings[0].topScorer.runs}`}
+        />
+        <Meta
+          label="Best bowler"
+          value={`${r.oppInnings[0].bestBowler.name} · ${r.oppInnings[0].bestBowler.wickets}/${r.oppInnings[0].bestBowler.runs}`}
+        />
         <Meta label="Player of the Match" value={r.playerOfMatch} accent />
       </div>
 
       <ul className="space-y-1 border-t border-[color:var(--border)] px-5 py-3 text-sm text-muted-foreground">
-        {r.highlights.map((h, k) => <li key={k}>• {h}</li>)}
+        {r.highlights.map((h, k) => (
+          <li key={k}>• {h}</li>
+        ))}
       </ul>
 
       <div className="flex justify-end border-t border-[color:var(--border)] px-5 py-3">
-        <button onClick={onView} className="btn-ghost-gold inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs">
+        <button
+          onClick={onView}
+          className="btn-ghost-gold inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs"
+        >
           <FileText className="h-3.5 w-3.5" /> View Scorecard
         </button>
       </div>
@@ -634,16 +856,33 @@ function TestCard({ r, onView }: { r: TestScorecard; onView: () => void }) {
   );
 }
 
-function TestSide({ title, innings, highlight, align = "left" }: { title: string; innings: Innings[]; highlight: boolean; align?: "left" | "right" }) {
+function TestSide({
+  title,
+  innings,
+  highlight,
+  align = "left",
+}: {
+  title: string;
+  innings: Innings[];
+  highlight: boolean;
+  align?: "left" | "right";
+}) {
   return (
     <div className={align === "right" ? "text-right" : ""}>
       <div className="text-xs uppercase tracking-widest text-muted-foreground">{title}</div>
       {innings.map((inn, i) => (
-        <div key={i} className={`mt-1 text-lg font-bold ${highlight && i === innings.length - 1 ? "text-gold" : ""}`}>
+        <div
+          key={i}
+          className={`mt-1 text-lg font-bold ${highlight && i === innings.length - 1 ? "text-gold" : ""}`}
+        >
           {i === 0 ? "1st" : "2nd"}: {inn.runs}/{inn.wickets}
           {inn.declared && <span className="ml-1 text-[10px] font-normal text-gold">dec</span>}
-          {inn.followOn && <span className="ml-1 text-[10px] font-normal text-muted-foreground">(f/o)</span>}
-          <span className="ml-1 text-xs font-normal text-muted-foreground">({formatOvers(inn.overs)})</span>
+          {inn.followOn && (
+            <span className="ml-1 text-[10px] font-normal text-muted-foreground">(f/o)</span>
+          )}
+          <span className="ml-1 text-xs font-normal text-muted-foreground">
+            ({formatOvers(inn.overs)})
+          </span>
         </div>
       ))}
     </div>

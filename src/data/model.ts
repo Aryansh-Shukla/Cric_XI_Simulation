@@ -33,15 +33,15 @@ export interface Competition {
 }
 
 export interface Edition {
-  id: string;              // e.g. "odiwc-2011"
+  id: string; // e.g. "odiwc-2011"
   competitionId: CompetitionId;
   year: number;
-  label: string;           // e.g. "World Cup 2011"
+  label: string; // e.g. "World Cup 2011"
 }
 
 export interface Team {
-  id: string;              // canonical, stable across renames
-  name: string;            // current/default display name
+  id: string; // canonical, stable across renames
+  name: string; // current/default display name
   type: "International" | "Franchise";
   country: string;
   /** Franchise renames share a lineage id so "same team, different year" spans them. */
@@ -52,14 +52,14 @@ export interface Team {
 
 /** One real human being. Never duplicated per era. */
 export interface CanonicalPlayer {
-  id: string;              // slug of the name, e.g. "virat-kohli"
+  id: string; // slug of the name, e.g. "virat-kohli"
   name: string;
   nationality: string;
 }
 
 /** The version of a player as they were in one specific squad. */
 export interface PlayerEditionProfile {
-  id: string;              // `${squadId}::${playerId}`
+  id: string; // `${squadId}::${playerId}`
   playerId: string;
   name: string;
   nationality: string;
@@ -69,7 +69,7 @@ export interface PlayerEditionProfile {
   teamId: string;
   squadId: string;
 
-  role: Role;                     // engine-level role
+  role: Role; // engine-level role
   primaryRole: DetailedRole;
   secondaryRoles: DetailedRole[];
 
@@ -93,13 +93,13 @@ export interface PlayerEditionProfile {
 }
 
 export interface HistoricalSquad {
-  id: string;              // `${competitionId}:${editionId}:${teamId}`
+  id: string; // `${competitionId}:${editionId}:${teamId}`
   competitionId: CompetitionId;
   editionId: string;
   teamId: string;
   year: number;
-  label: string;           // e.g. "India — World Cup 2011"
-  teamName: string;        // era-correct team name
+  label: string; // e.g. "India — World Cup 2011"
+  teamName: string; // era-correct team name
   sourceStatus: SourceStatus;
   playerProfileIds: string[];
 }

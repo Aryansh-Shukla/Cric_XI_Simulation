@@ -15,6 +15,6 @@ export const TeamRepository = {
   lineageTeamIds(teamId: string): string[] {
     const team = TEAM_BY_ID.get(teamId);
     if (!team?.franchiseLineageId) return [teamId];
-    return TEAMS.filter(t => t.franchiseLineageId === team.franchiseLineageId).map(t => t.id);
+    return TEAMS.filter((t) => t.franchiseLineageId === team.franchiseLineageId).map((t) => t.id);
   },
 };

@@ -14,19 +14,28 @@ interface Props {
 
 const POSITIONS: [number, number][] = [
   [50, 55],
-  [30, 30], [70, 30],
-  [15, 55], [85, 55],
-  [30, 80], [70, 80],
+  [30, 30],
+  [70, 30],
+  [15, 55],
+  [85, 55],
+  [30, 80],
+  [70, 80],
   [50, 15],
-  [20, 15], [80, 15],
+  [20, 15],
+  [80, 15],
   [50, 90],
 ];
 
 export function TeamView({ players, mode, leadership, onSimulate, onRestart }: Props) {
   const v = validateTeam(players, mode);
-  const captain = (leadership && players.find(p => p.id === leadership.captainId)) || pickCaptain(players);
-  const vice = (leadership && players.find(p => p.id === leadership.viceCaptainId)) || pickViceCaptain(players, captain);
-  const keeper = (leadership && players.find(p => p.id === leadership.keeperId)) || players.find(p => p.role === "Wicketkeeper");
+  const captain =
+    (leadership && players.find((p) => p.id === leadership.captainId)) || pickCaptain(players);
+  const vice =
+    (leadership && players.find((p) => p.id === leadership.viceCaptainId)) ||
+    pickViceCaptain(players, captain);
+  const keeper =
+    (leadership && players.find((p) => p.id === leadership.keeperId)) ||
+    players.find((p) => p.role === "Wicketkeeper");
   const chem = activatedChemistry(players);
 
   return (
@@ -38,7 +47,9 @@ export function TeamView({ players, mode, leadership, onSimulate, onRestart }: P
             <h2 className="mt-1 text-3xl font-bold md:text-4xl">Your Starting XI</h2>
           </div>
           <div className="flex gap-2">
-            <button onClick={onRestart} className="btn-ghost-gold rounded-full px-4 py-2 text-sm">Restart</button>
+            <button onClick={onRestart} className="btn-ghost-gold rounded-full px-4 py-2 text-sm">
+              Restart
+            </button>
             <button
               onClick={onSimulate}
               disabled={!v.valid}
@@ -70,13 +81,20 @@ export function TeamView({ players, mode, leadership, onSimulate, onRestart }: P
                   className="absolute -translate-x-1/2 -translate-y-1/2"
                 >
                   <div className="relative flex flex-col items-center">
-                    <div className={`grid h-10 w-10 place-items-center rounded-full border-2 text-[10px] font-bold shadow-md ${
-                      isCap ? "border-[color:var(--gold)] bg-[color:var(--gold)]/90 text-[color:var(--primary-foreground)]"
-                        : p.role === "Wicketkeeper"
-                          ? "border-[color:var(--accent)] bg-[color:var(--accent)]/90 text-[color:var(--primary-foreground)]"
-                          : "border-white/60 bg-white/90 text-[color:var(--primary-foreground)]"
-                    }`}>
-                      {p.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                    <div
+                      className={`grid h-10 w-10 place-items-center rounded-full border-2 text-[10px] font-bold shadow-md ${
+                        isCap
+                          ? "border-[color:var(--gold)] bg-[color:var(--gold)]/90 text-[color:var(--primary-foreground)]"
+                          : p.role === "Wicketkeeper"
+                            ? "border-[color:var(--accent)] bg-[color:var(--accent)]/90 text-[color:var(--primary-foreground)]"
+                            : "border-white/60 bg-white/90 text-[color:var(--primary-foreground)]"
+                      }`}
+                    >
+                      {p.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .slice(0, 2)}
                     </div>
                     <div className="mt-1 whitespace-nowrap rounded bg-black/60 px-1.5 py-0.5 text-[9px] font-medium backdrop-blur">
                       {p.name.split(" ").slice(-1)[0]}
@@ -92,7 +110,9 @@ export function TeamView({ players, mode, leadership, onSimulate, onRestart }: P
 
           <div className="space-y-4">
             <div className="glass-card rounded-2xl p-5">
-              <div className="text-xs uppercase tracking-widest text-muted-foreground">Team Balance</div>
+              <div className="text-xs uppercase tracking-widest text-muted-foreground">
+                Team Balance
+              </div>
               <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
                 <Stat label="Wicketkeepers" value={v.summary.wicketkeepers} />
                 <Stat label="Bowling options" value={v.summary.bowlers} />
@@ -111,7 +131,9 @@ export function TeamView({ players, mode, leadership, onSimulate, onRestart }: P
                   <>
                     <AlertTriangle className="mt-0.5 h-4 w-4 text-[color:var(--destructive)]" />
                     <ul className="space-y-1">
-                      {v.errors.map(e => <li key={e}>{e}</li>)}
+                      {v.errors.map((e) => (
+                        <li key={e}>{e}</li>
+                      ))}
                     </ul>
                   </>
                 )}
@@ -123,10 +145,21 @@ export function TeamView({ players, mode, leadership, onSimulate, onRestart }: P
                 <Crown className="h-3.5 w-3.5 text-gold" /> Leadership
               </div>
               <div className="mt-3 grid gap-2 text-sm">
-                <div className="flex items-center justify-between"><span>Captain</span><span className="font-semibold text-gold">{captain.name}</span></div>
-                <div className="flex items-center justify-between"><span>Vice Captain</span><span className="font-semibold">{vice.name}</span></div>
-                <div className="flex items-center justify-between"><span className="inline-flex items-center gap-1"><Shield className="h-3 w-3" />Keeper</span>
-                  <span className="font-semibold">{keeper?.name ?? "—"}</span></div>
+                <div className="flex items-center justify-between">
+                  <span>Captain</span>
+                  <span className="font-semibold text-gold">{captain.name}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Vice Captain</span>
+                  <span className="font-semibold">{vice.name}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="inline-flex items-center gap-1">
+                    <Shield className="h-3 w-3" />
+                    Keeper
+                  </span>
+                  <span className="font-semibold">{keeper?.name ?? "—"}</span>
+                </div>
               </div>
             </div>
 
@@ -135,10 +168,12 @@ export function TeamView({ players, mode, leadership, onSimulate, onRestart }: P
                 <Sparkles className="h-3.5 w-3.5 text-[color:var(--accent)]" /> Chemistry
               </div>
               {chem.length === 0 ? (
-                <div className="mt-3 text-sm text-muted-foreground">No legendary combinations activated.</div>
+                <div className="mt-3 text-sm text-muted-foreground">
+                  No legendary combinations activated.
+                </div>
               ) : (
                 <div className="mt-3 space-y-2">
-                  {chem.map(c => (
+                  {chem.map((c) => (
                     <motion.div
                       key={c.pair}
                       initial={{ opacity: 0, x: -8 }}

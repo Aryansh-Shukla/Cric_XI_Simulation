@@ -1,10 +1,27 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { CheckCircle2, Circle, Lock, Sparkles, Users, Globe2, TrendingUp, Shuffle, Calendar, Users2, AlertTriangle } from "lucide-react";
+import {
+  CheckCircle2,
+  Circle,
+  Lock,
+  Sparkles,
+  Users,
+  Globe2,
+  TrendingUp,
+  Shuffle,
+  Calendar,
+  Users2,
+  AlertTriangle,
+} from "lucide-react";
 import { PlayerCard } from "./PlayerCard";
 import { MODE_LABELS } from "@/lib/cricket/data";
 import type { Difficulty, GameMode, Player, Squad } from "@/lib/cricket/types";
-import { computeStatus, canPickPlayer, overseasCount, estimatedRating } from "@/lib/cricket/requirements";
+import {
+  computeStatus,
+  canPickPlayer,
+  overseasCount,
+  estimatedRating,
+} from "@/lib/cricket/requirements";
 import { activatedChemistry } from "@/lib/cricket/simulation";
 import { DraftPoolService } from "@/services/DraftPoolService";
 import { PlayerEligibilityService } from "@/services/PlayerEligibilityService";
@@ -27,23 +44,35 @@ function shuffle<T>(arr: T[]): T[] {
 
 const REROLL_LIMIT = 4;
 
-function pickChoices(squad: Squad, picked: Player[], mode: GameMode, remainingSlots: number, prioritizeValid = false): Player[] {
+function pickChoices(
+  squad: Squad,
+  picked: Player[],
+  mode: GameMode,
+  remainingSlots: number,
+  prioritizeValid = false,
+): Player[] {
   // Canonical enforcement: every profile of an already-drafted cricketer is removed.
   const pool = PlayerEligibilityService.filterEligible(squad.players, picked);
   if (!pool.length) return [];
   if (prioritizeValid) {
-    const valid = pool.filter(p => canPickPlayer(p, { picked, mode, remainingSlots }).canPick);
+    const valid = pool.filter((p) => canPickPlayer(p, { picked, mode, remainingSlots }).canPick);
     if (valid.length >= 5) return shuffle(valid).slice(0, 5);
-    const invalid = shuffle(pool.filter(p => !valid.includes(p)));
+    const invalid = shuffle(pool.filter((p) => !valid.includes(p)));
     return [...shuffle(valid), ...invalid].slice(0, 5);
   }
   return shuffle(pool).slice(0, 5);
 }
 
 /** True when the squad can offer at least one legal pick for the current XI. */
-function squadHasValidPick(squad: Squad, picked: Player[], mode: GameMode, remainingSlots: number): boolean {
-  return PlayerEligibilityService.filterEligible(squad.players, picked)
-    .some(pl => canPickPlayer(pl, { picked, mode, remainingSlots }).canPick);
+function squadHasValidPick(
+  squad: Squad,
+  picked: Player[],
+  mode: GameMode,
+  remainingSlots: number,
+): boolean {
+  return PlayerEligibilityService.filterEligible(squad.players, picked).some(
+    (pl) => canPickPlayer(pl, { picked, mode, remainingSlots }).canPick,
+  );
 }
 
 /**
@@ -51,21 +80,32 @@ function squadHasValidPick(squad: Squad, picked: Player[], mode: GameMode, remai
  * cross-pool selection of legal players so the draft can never dead-end.
  */
 function rescueDeal(
-  pool: Squad[], picked: Player[], mode: GameMode, remainingSlots: number,
+  pool: Squad[],
+  picked: Player[],
+  mode: GameMode,
+  remainingSlots: number,
 ): { squad: Squad | null; choices: Player[] } {
   const shuffled = shuffle(pool);
-  const rescueSquad = shuffled.find(s => squadHasValidPick(s, picked, mode, remainingSlots));
+  const rescueSquad = shuffled.find((s) => squadHasValidPick(s, picked, mode, remainingSlots));
   if (rescueSquad) {
-    return { squad: rescueSquad, choices: pickChoices(rescueSquad, picked, mode, remainingSlots, true) };
+    return {
+      squad: rescueSquad,
+      choices: pickChoices(rescueSquad, picked, mode, remainingSlots, true),
+    };
   }
   // Last resort: build a mixed pool of any legal player anywhere in the catalogue.
-  const everyone = PlayerEligibilityService.filterEligible(shuffled.flatMap(s => s.players), picked);
-  const legal = everyone.filter(p => canPickPlayer(p, { picked, mode, remainingSlots }).canPick);
+  const everyone = PlayerEligibilityService.filterEligible(
+    shuffled.flatMap((s) => s.players),
+    picked,
+  );
+  const legal = everyone.filter((p) => canPickPlayer(p, { picked, mode, remainingSlots }).canPick);
   if (legal.length) return { squad: null, choices: shuffle(legal).slice(0, 5) };
   // Absolute floor: ignore soft feasibility guards, keep only hard caps satisfied.
-  const relaxed = everyone.filter(p => {
-    if (mode === "FRANCHISE_T20" && p.isOverseas && picked.filter(x => x.isOverseas).length >= 4) return false;
-    if (p.role === "Batsman" && picked.filter(x => x.role === "Batsman").length >= 7) return false;
+  const relaxed = everyone.filter((p) => {
+    if (mode === "FRANCHISE_T20" && p.isOverseas && picked.filter((x) => x.isOverseas).length >= 4)
+      return false;
+    if (p.role === "Batsman" && picked.filter((x) => x.role === "Batsman").length >= 7)
+      return false;
     return true;
   });
   return { squad: null, choices: shuffle(relaxed).slice(0, 5) };
@@ -94,22 +134,25 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
   }, []);
 
   // Advance to a fresh squad + choices when a player is picked (round changes)
-  const advanceRound = useCallback((nextPicked: Player[]) => {
-    if (nextPicked.length >= 11) return;
-    const slots = 11 - nextPicked.length;
-    const avoid = new Set([...recentSquadIds.slice(-3), squad.id]);
-    const candidates = shuffle(pool.filter(s => !avoid.has(s.id)));
-    // Prefer a squad that can actually offer a legal pick — never deal a dead round.
-    const nextSquad =
-      candidates.find(s => squadHasValidPick(s, nextPicked, mode, slots))
-      ?? shuffle(pool).find(s => squadHasValidPick(s, nextPicked, mode, slots))
-      ?? candidates[0]
-      ?? shuffle(pool)[0];
-    setSquad(nextSquad);
-    setEmergency(false);
-    setChoices(pickChoices(nextSquad, nextPicked, mode, slots, true));
-    setRecentSquadIds(r => [...r, nextSquad.id].slice(-5));
-  }, [pool, mode, recentSquadIds, squad.id]);
+  const advanceRound = useCallback(
+    (nextPicked: Player[]) => {
+      if (nextPicked.length >= 11) return;
+      const slots = 11 - nextPicked.length;
+      const avoid = new Set([...recentSquadIds.slice(-3), squad.id]);
+      const candidates = shuffle(pool.filter((s) => !avoid.has(s.id)));
+      // Prefer a squad that can actually offer a legal pick — never deal a dead round.
+      const nextSquad =
+        candidates.find((s) => squadHasValidPick(s, nextPicked, mode, slots)) ??
+        shuffle(pool).find((s) => squadHasValidPick(s, nextPicked, mode, slots)) ??
+        candidates[0] ??
+        shuffle(pool)[0];
+      setSquad(nextSquad);
+      setEmergency(false);
+      setChoices(pickChoices(nextSquad, nextPicked, mode, slots, true));
+      setRecentSquadIds((r) => [...r, nextSquad.id].slice(-5));
+    },
+    [pool, mode, recentSquadIds, squad.id],
+  );
 
   const select = (p: Player) => {
     const check = canPickPlayer(p, { picked, mode, remainingSlots });
@@ -137,14 +180,15 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
   const applyReroll = (candidates: Squad[]) => {
     if (!candidates.length) return false;
     const shuffled = shuffle(candidates);
-    const next = shuffled.find(s => squadHasValidPick(s, picked, mode, remainingSlots)) ?? shuffled[0];
+    const next =
+      shuffled.find((s) => squadHasValidPick(s, picked, mode, remainingSlots)) ?? shuffled[0];
     let nextSquad = next;
     let nextChoices = pickChoices(next, picked, mode, remainingSlots, true);
     let nextEmergency = false;
     // If the rerolled squad cannot offer a legal pick, recover *inside* the
     // reroll candidates so the team/edition invariant is never broken by the
     // global auto-rescue (which would swap in an unrelated squad).
-    if (!nextChoices.some(p => canPickPlayer(p, { picked, mode, remainingSlots }).canPick)) {
+    if (!nextChoices.some((p) => canPickPlayer(p, { picked, mode, remainingSlots }).canPick)) {
       const rescue = rescueDeal(shuffled, picked, mode, remainingSlots);
       if (rescue.choices.length) {
         nextChoices = rescue.choices;
@@ -155,7 +199,7 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
     setSquad(nextSquad);
     setEmergency(nextEmergency);
     setChoices(nextChoices);
-    setRecentSquadIds(r => [...r, nextSquad.id].slice(-5));
+    setRecentSquadIds((r) => [...r, nextSquad.id].slice(-5));
     return true;
   };
 
@@ -164,7 +208,7 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
     const alt = sameYearOptions.length
       ? sameYearOptions
       : RerollService.sameYearDifferentTeam(squad, mode);
-    if (applyReroll(alt)) setYearRerolls(n => n - 1);
+    if (applyReroll(alt)) setYearRerolls((n) => n - 1);
   };
 
   const rerollSameTeam = () => {
@@ -172,16 +216,21 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
     const alt = sameTeamOptions.length
       ? sameTeamOptions
       : RerollService.sameTeamDifferentYear(squad, mode);
-    if (applyReroll(alt)) setTeamRerolls(n => n - 1);
+    if (applyReroll(alt)) setTeamRerolls((n) => n - 1);
   };
 
-  const sameYearAvailable = sameYearOptions.length > 0 || RerollService.sameYearDifferentTeam(squad, mode).length > 0;
-  const sameTeamAvailable = sameTeamOptions.length > 0 || RerollService.sameTeamDifferentYear(squad, mode).length > 0;
+  const sameYearAvailable =
+    sameYearOptions.length > 0 || RerollService.sameYearDifferentTeam(squad, mode).length > 0;
+  const sameTeamAvailable =
+    sameTeamOptions.length > 0 || RerollService.sameTeamDifferentYear(squad, mode).length > 0;
 
   const reshuffle = useCallback(() => {
     // Try same squad first, prioritizing valid picks
     const fresh = pickChoices(squad, picked, mode, remainingSlots, true);
-    if (fresh.length && fresh.some(p => canPickPlayer(p, { picked, mode, remainingSlots }).canPick)) {
+    if (
+      fresh.length &&
+      fresh.some((p) => canPickPlayer(p, { picked, mode, remainingSlots }).canPick)
+    ) {
       setEmergency(false);
       setChoices(fresh);
       return;
@@ -192,21 +241,26 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
     if (rescue.squad) {
       setSquad(rescue.squad);
       setEmergency(false);
-      setRecentSquadIds(r => [...r, rescue.squad!.id].slice(-5));
+      setRecentSquadIds((r) => [...r, rescue.squad!.id].slice(-5));
     } else {
       setEmergency(true);
     }
     setChoices(rescue.choices);
   }, [pool, picked, mode, remainingSlots, squad]);
 
-  const validCount = choices.filter(p => canPickPlayer(p, { picked, mode, remainingSlots }).canPick).length;
+  const validCount = choices.filter(
+    (p) => canPickPlayer(p, { picked, mode, remainingSlots }).canPick,
+  ).length;
   const softLocked = validCount === 0;
 
   // Auto-rescue: keep re-dealing until a legal pick exists. Depends on `choices`
   // so a rescue that still fails triggers another attempt instead of dead-ending.
   useEffect(() => {
     if (picked.length >= 11) return;
-    if (!softLocked) { rescueAttempts.current = 0; return; }
+    if (!softLocked) {
+      rescueAttempts.current = 0;
+      return;
+    }
     // Bounded retries: the feasibility guard makes a true dead-end impossible,
     // but never spin the renderer if one somehow occurs.
     if (rescueAttempts.current >= 8) return;
@@ -225,14 +279,20 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
       <div className="mx-auto max-w-7xl">
         <header className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <div className="text-xs uppercase tracking-widest text-gold">{MODE_LABELS[mode].title}</div>
+            <div className="text-xs uppercase tracking-widest text-gold">
+              {MODE_LABELS[mode].title}
+            </div>
             <h2 className="mt-1 text-3xl font-bold md:text-4xl">
               Round {round} <span className="text-muted-foreground">/ 11</span>
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Pick one player from{" "}
               <span className="font-medium text-foreground">
-                {difficulty === "Legend" ? "a mystery squad" : emergency ? "the emergency draft pool" : squad.label}
+                {difficulty === "Legend"
+                  ? "a mystery squad"
+                  : emergency
+                    ? "the emergency draft pool"
+                    : squad.label}
               </span>
             </p>
           </div>
@@ -263,7 +323,9 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
           >
             <Calendar className="h-3.5 w-3.5 text-gold" />
             Another Team · {squad.year}
-            <span className="rounded-full bg-[color:var(--gold)]/15 px-1.5 py-0.5 text-[10px] text-gold">{yearRerolls}</span>
+            <span className="rounded-full bg-[color:var(--gold)]/15 px-1.5 py-0.5 text-[10px] text-gold">
+              {yearRerolls}
+            </span>
           </button>
           <button
             onClick={rerollSameTeam}
@@ -273,7 +335,9 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
           >
             <Users2 className="h-3.5 w-3.5 text-gold" />
             Same Team · Different Year
-            <span className="rounded-full bg-[color:var(--gold)]/15 px-1.5 py-0.5 text-[10px] text-gold">{teamRerolls}</span>
+            <span className="rounded-full bg-[color:var(--gold)]/15 px-1.5 py-0.5 text-[10px] text-gold">
+              {teamRerolls}
+            </span>
           </button>
           <button
             onClick={reshuffle}
@@ -310,11 +374,15 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
                   const check = canPickPlayer(pl, { picked, mode, remainingSlots });
                   return (
                     <div key={pl.id} className="relative">
-                      <div className={check.canPick ? "" : "pointer-events-none opacity-40 grayscale"}>
+                      <div
+                        className={check.canPick ? "" : "pointer-events-none opacity-40 grayscale"}
+                      >
                         <PlayerCard
                           player={pl}
                           difficulty={difficulty}
-                          squadLabel={difficulty === "Legend" || emergency ? undefined : squad.label}
+                          squadLabel={
+                            difficulty === "Legend" || emergency ? undefined : squad.label
+                          }
                           onSelect={() => select(pl)}
                         />
                       </div>
@@ -333,7 +401,9 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
 
             {picked.length > 0 && (
               <section className="mt-10">
-                <div className="text-xs uppercase tracking-widest text-muted-foreground">Your XI so far</div>
+                <div className="text-xs uppercase tracking-widest text-muted-foreground">
+                  Your XI so far
+                </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {picked.map((pl, i) => (
                     <motion.span
@@ -355,25 +425,37 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
           <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
             <div className="glass-card rounded-2xl p-4">
               <div className="flex items-center justify-between">
-                <div className="text-xs uppercase tracking-widest text-muted-foreground">Team Rating</div>
+                <div className="text-xs uppercase tracking-widest text-muted-foreground">
+                  Team Rating
+                </div>
                 <TrendingUp className="h-4 w-4 text-gold" />
               </div>
               <div className="mt-1 text-4xl font-bold text-gold">{rating || "--"}</div>
-              <div className="mt-1 text-[11px] text-muted-foreground">{picked.length}/11 drafted · {remainingSlots} slots left</div>
+              <div className="mt-1 text-[11px] text-muted-foreground">
+                {picked.length}/11 drafted · {remainingSlots} slots left
+              </div>
             </div>
 
             <div className="glass-card rounded-2xl p-4">
-              <div className="text-xs uppercase tracking-widest text-muted-foreground">Requirements</div>
+              <div className="text-xs uppercase tracking-widest text-muted-foreground">
+                Requirements
+              </div>
               <ul className="mt-3 space-y-1.5 text-sm">
-                {status.map(r => (
+                {status.map((r) => (
                   <li key={r.key} className="flex items-center justify-between gap-2">
                     <span className="flex items-center gap-2">
-                      {r.satisfied
-                        ? <CheckCircle2 className="h-4 w-4 text-[color:var(--accent)]" />
-                        : <Circle className="h-4 w-4 text-muted-foreground" />}
-                      <span className={r.satisfied ? "text-foreground" : "text-muted-foreground"}>{r.label}</span>
+                      {r.satisfied ? (
+                        <CheckCircle2 className="h-4 w-4 text-[color:var(--accent)]" />
+                      ) : (
+                        <Circle className="h-4 w-4 text-muted-foreground" />
+                      )}
+                      <span className={r.satisfied ? "text-foreground" : "text-muted-foreground"}>
+                        {r.label}
+                      </span>
                     </span>
-                    <span className={`text-xs font-mono ${r.satisfied ? "text-[color:var(--accent)]" : "text-muted-foreground"}`}>
+                    <span
+                      className={`text-xs font-mono ${r.satisfied ? "text-[color:var(--accent)]" : "text-muted-foreground"}`}
+                    >
                       {r.filled}/{r.required}
                     </span>
                   </li>
@@ -387,17 +469,24 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
                   <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground">
                     <Globe2 className="h-3.5 w-3.5" /> Overseas
                   </div>
-                  <div className={`text-sm font-bold ${overseas >= 4 ? "text-[color:var(--destructive)]" : "text-gold"}`}>
+                  <div
+                    className={`text-sm font-bold ${overseas >= 4 ? "text-[color:var(--destructive)]" : "text-gold"}`}
+                  >
                     {overseas}/4
                   </div>
                 </div>
                 <div className="mt-2 flex gap-1">
                   {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className={`h-1.5 flex-1 rounded-full ${i < overseas ? "bg-[color:var(--gold)]" : "bg-white/10"}`} />
+                    <div
+                      key={i}
+                      className={`h-1.5 flex-1 rounded-full ${i < overseas ? "bg-[color:var(--gold)]" : "bg-white/10"}`}
+                    />
                   ))}
                 </div>
                 {overseas >= 4 && (
-                  <div className="mt-2 text-[11px] text-[color:var(--destructive)]">Overseas cap reached — locked.</div>
+                  <div className="mt-2 text-[11px] text-[color:var(--destructive)]">
+                    Overseas cap reached — locked.
+                  </div>
                 )}
               </div>
             )}
@@ -408,8 +497,11 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
                   <Sparkles className="h-3.5 w-3.5 text-[color:var(--accent)]" /> Chemistry
                 </div>
                 <div className="mt-2 space-y-1.5">
-                  {chem.map(c => (
-                    <div key={c.pair} className="rounded-lg border border-[color:var(--accent)]/30 bg-[color:var(--accent)]/10 px-2 py-1.5 text-xs">
+                  {chem.map((c) => (
+                    <div
+                      key={c.pair}
+                      className="rounded-lg border border-[color:var(--accent)]/30 bg-[color:var(--accent)]/10 px-2 py-1.5 text-xs"
+                    >
                       <div className="font-medium text-[color:var(--accent)]">{c.label}</div>
                       <div className="text-[10px] text-muted-foreground">{c.pair}</div>
                     </div>
@@ -423,8 +515,28 @@ export function Draft({ mode, difficulty, onComplete }: Props) {
                 <Users className="h-3.5 w-3.5" /> Balance
               </div>
               <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                <BalancePill label="Batting" value={picked.filter(pl => pl.role === "Batsman" || pl.role === "Wicketkeeper" || pl.role === "AllRounder").length} />
-                <BalancePill label="Bowling" value={picked.filter(pl => pl.role === "PaceBowler" || pl.role === "SpinBowler" || pl.role === "AllRounder").length} />
+                <BalancePill
+                  label="Batting"
+                  value={
+                    picked.filter(
+                      (pl) =>
+                        pl.role === "Batsman" ||
+                        pl.role === "Wicketkeeper" ||
+                        pl.role === "AllRounder",
+                    ).length
+                  }
+                />
+                <BalancePill
+                  label="Bowling"
+                  value={
+                    picked.filter(
+                      (pl) =>
+                        pl.role === "PaceBowler" ||
+                        pl.role === "SpinBowler" ||
+                        pl.role === "AllRounder",
+                    ).length
+                  }
+                />
               </div>
             </div>
           </aside>

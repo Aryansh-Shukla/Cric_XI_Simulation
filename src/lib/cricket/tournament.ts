@@ -1,6 +1,13 @@
 import type {
-  Player, GameMode, MatchResult, StageKind, LimitedScorecard, TestScorecard,
-  PlayerAgg, FullInnings, Innings,
+  Player,
+  GameMode,
+  MatchResult,
+  StageKind,
+  LimitedScorecard,
+  TestScorecard,
+  PlayerAgg,
+  FullInnings,
+  Innings,
 } from "./types";
 import { KNOCKOUT_STAGES } from "./types";
 import { CHEMISTRY } from "./data";
@@ -13,16 +20,21 @@ import { simulateTestMatch } from "./sim/test";
 
 function stagesFor(mode: GameMode): StageKind[] {
   switch (mode) {
-    case "ODI_WC":        return ["League", "League", "League", "Semi Final", "Final"];
-    case "T20_WC":        return ["Group", "Group", "Super 8", "Super 8", "Semi Final", "Final"];
-    case "CHAMPIONS":     return ["Group", "Group", "Semi Final", "Final"];
-    case "FRANCHISE_T20": return ["League", "League", "League", "League", "Qualifier 1", "Qualifier 2", "Final"];
-    case "TEST":          return ["Test 1", "Test 2", "Test 3"];
+    case "ODI_WC":
+      return ["League", "League", "League", "Semi Final", "Final"];
+    case "T20_WC":
+      return ["Group", "Group", "Super 8", "Super 8", "Semi Final", "Final"];
+    case "CHAMPIONS":
+      return ["Group", "Group", "Semi Final", "Final"];
+    case "FRANCHISE_T20":
+      return ["League", "League", "League", "League", "Qualifier 1", "Qualifier 2", "Final"];
+    case "TEST":
+      return ["Test 1", "Test 2", "Test 3"];
   }
 }
 
 function chemistryBonus(players: Player[]): number {
-  const names = new Set(players.map(p => p.name));
+  const names = new Set(players.map((p) => p.name));
   let total = 0;
   for (const link of CHEMISTRY) if (names.has(link.a) && names.has(link.b)) total += 3;
   return total;
@@ -108,10 +120,12 @@ export interface TournamentState {
   seed: number;
   stages: StageKind[];
   fixtures: Fixture[];
-  currentIndex: number;      // index of NEXT match to play
-  results: MatchResult[];    // user matches (in order)
-  aiResults: MatchResult[];  // AI-vs-AI matches (for stats/standings)
-  wins: number; losses: number; draws: number;
+  currentIndex: number; // index of NEXT match to play
+  results: MatchResult[]; // user matches (in order)
+  aiResults: MatchResult[]; // AI-vs-AI matches (for stats/standings)
+  wins: number;
+  losses: number;
+  draws: number;
   eliminated: boolean;
   eliminatedAt?: StageKind;
   championshipWon: boolean;
@@ -142,13 +156,14 @@ export function createTournament(
   ourName = "Your XI",
 ): TournamentState {
   const rng = mulberry32(seed);
-  const captain = (captainId && players.find(p => p.id === captainId)) || pickCaptain(players);
+  const captain = (captainId && players.find((p) => p.id === captainId)) || pickCaptain(players);
   const stages = stagesFor(mode);
   // One coherent competition field: the user's opponents are drawn from the same
   // set of teams that contest the background matchdays, so the table adds up.
-  const field = mode === "TEST"
-    ? buildOpponents(mode, rng, 1)
-    : buildOpponents(mode, rng, Math.max(6, Math.min(8, stages.length + 2)));
+  const field =
+    mode === "TEST"
+      ? buildOpponents(mode, rng, 1)
+      : buildOpponents(mode, rng, Math.max(6, Math.min(8, stages.length + 2)));
   const fixtures: Fixture[] = stages.map((stage, i) => ({
     stage,
     opponent: field[i % field.length],
@@ -157,12 +172,22 @@ export function createTournament(
   const chem = chemistryBonus(players);
 
   return {
-    mode, ourName, players, captain, seed,
-    stages, fixtures,
+    mode,
+    ourName,
+    players,
+    captain,
+    seed,
+    stages,
+    fixtures,
     currentIndex: 0,
-    results: [], aiResults: [],
-    wins: 0, losses: 0, draws: 0,
-    eliminated: false, championshipWon: false, complete: false,
+    results: [],
+    aiResults: [],
+    wins: 0,
+    losses: 0,
+    draws: 0,
+    eliminated: false,
+    championshipWon: false,
+    complete: false,
     teamRatingSnapshot: ratingSnapshot,
     chemistryBonus: chem,
     finalStageReached: stages[0],
@@ -178,8 +203,16 @@ export function createTournament(
 function ensureRow(store: Record<string, StandingRow>, name: string, isOurs: boolean): StandingRow {
   if (!store[name]) {
     store[name] = {
-      name, played: 0, wins: 0, losses: 0, points: 0,
-      runsFor: 0, oversFor: 0, runsAgainst: 0, oversAgainst: 0, isOurs,
+      name,
+      played: 0,
+      wins: 0,
+      losses: 0,
+      points: 0,
+      runsFor: 0,
+      oversFor: 0,
+      runsAgainst: 0,
+      oversAgainst: 0,
+      isOurs,
     };
   }
   if (isOurs) store[name].isOurs = true;
@@ -187,7 +220,11 @@ function ensureRow(store: Record<string, StandingRow>, name: string, isOurs: boo
 }
 
 /** Record one limited-overs result into the points table (2 pts a win, NRR tracked). */
-function recordStanding(store: Record<string, StandingRow>, r: LimitedScorecard, ourIsUser: boolean) {
+function recordStanding(
+  store: Record<string, StandingRow>,
+  r: LimitedScorecard,
+  ourIsUser: boolean,
+) {
   const home = ensureRow(store, r.ourName, ourIsUser);
   const away = ensureRow(store, r.oppName, false);
   // NRR uses the full quota whenever a side is bowled out, exactly like the
@@ -195,13 +232,25 @@ function recordStanding(store: Record<string, StandingRow>, r: LimitedScorecard,
   const maxOvers = r.format === "T20" ? 20 : 50;
   const ourOvers = nrrOvers(r.ourInnings, maxOvers);
   const oppOvers = nrrOvers(r.oppInnings, maxOvers);
-  home.played++; away.played++;
-  home.runsFor += r.ourInnings.runs; home.oversFor += ourOvers;
-  home.runsAgainst += r.oppInnings.runs; home.oversAgainst += oppOvers;
-  away.runsFor += r.oppInnings.runs; away.oversFor += oppOvers;
-  away.runsAgainst += r.ourInnings.runs; away.oversAgainst += ourOvers;
-  if (r.weWon) { home.wins++; home.points += 2; away.losses++; }
-  else { away.wins++; away.points += 2; home.losses++; }
+  home.played++;
+  away.played++;
+  home.runsFor += r.ourInnings.runs;
+  home.oversFor += ourOvers;
+  home.runsAgainst += r.oppInnings.runs;
+  home.oversAgainst += oppOvers;
+  away.runsFor += r.oppInnings.runs;
+  away.oversFor += oppOvers;
+  away.runsAgainst += r.ourInnings.runs;
+  away.oversAgainst += ourOvers;
+  if (r.weWon) {
+    home.wins++;
+    home.points += 2;
+    away.losses++;
+  } else {
+    away.wins++;
+    away.points += 2;
+    home.losses++;
+  }
 }
 
 /** Standings sorted by points then NRR. */
@@ -219,21 +268,23 @@ const GROUP_STAGES: StageKind[] = ["League", "Group", "Super 8"];
 export function phaseTable(state: TournamentState): StandingRow[] {
   const rows = Object.values(state.phaseStandings);
   const source = rows.length ? rows : Object.values(state.standings);
-  return source.sort((a, b) => b.points - a.points || netRunRate(b) - netRunRate(a) || b.wins - a.wins);
+  return source.sort(
+    (a, b) => b.points - a.points || netRunRate(b) - netRunRate(a) || b.wins - a.wins,
+  );
 }
 
 /** Our position (1-based) in the table that decides qualification for this phase. */
 export function ourRank(state: TournamentState): number {
   const table = phaseTable(state);
-  const idx = table.findIndex(r => r.isOurs);
+  const idx = table.findIndex((r) => r.isOurs);
   return idx < 0 ? table.length + 1 : idx + 1;
 }
 
 /** How many teams survive the end of this group phase. */
 export function advanceCut(mode: GameMode, stage: StageKind): number {
-  if (mode === "FRANCHISE_T20") return 4;              // IPL: top 4 only
+  if (mode === "FRANCHISE_T20") return 4; // IPL: top 4 only
   if (mode === "T20_WC" && stage === "Group") return 6; // groups → Super 8
-  return 4;                                             // → semi-finals
+  return 4; // → semi-finals
 }
 
 /**
@@ -241,25 +292,44 @@ export function advanceCut(mode: GameMode, stage: StageKind): number {
  * Qualifier 2 is dropped later if Qualifier 1 is won.
  */
 function buildPlayoffPath(state: TournamentState, i: number, rank: number) {
-  const path: StageKind[] = rank <= 2
-    ? ["Qualifier 1", "Qualifier 2", "Final"]
-    : ["Eliminator", "Qualifier 2", "Final"];
+  const path: StageKind[] =
+    rank <= 2 ? ["Qualifier 1", "Qualifier 2", "Final"] : ["Eliminator", "Qualifier 2", "Final"];
   const placeholder = state.fixtures[i].opponent;
   state.fixtures = [
     ...state.fixtures.slice(0, i + 1),
-    ...path.map(stage => ({ stage, opponent: placeholder })),
+    ...path.map((stage) => ({ stage, opponent: placeholder })),
   ];
-  state.stages = state.fixtures.map(f => f.stage);
+  state.stages = state.fixtures.map((f) => f.stage);
 }
 
 /** Stats are per player PER TEAM — the same historical name can appear for
  *  our XI and for an AI squad in the same tournament. */
-function statKey(name: string, team: string) { return `${team}::${name}`; }
+function statKey(name: string, team: string) {
+  return `${team}::${name}`;
+}
 
-function ensureAgg(store: Record<string, PlayerAgg>, name: string, team: string, isOurs: boolean): PlayerAgg {
+function ensureAgg(
+  store: Record<string, PlayerAgg>,
+  name: string,
+  team: string,
+  isOurs: boolean,
+): PlayerAgg {
   const k = statKey(name, team);
   if (!store[k]) {
-    store[k] = { name, team, matches: 0, runs: 0, balls: 0, outs: 0, fours: 0, sixes: 0, wickets: 0, ballsBowled: 0, runsConceded: 0, isOurs };
+    store[k] = {
+      name,
+      team,
+      matches: 0,
+      runs: 0,
+      balls: 0,
+      outs: 0,
+      fours: 0,
+      sixes: 0,
+      wickets: 0,
+      ballsBowled: 0,
+      runsConceded: 0,
+      isOurs,
+    };
   }
   // Ownership can be discovered later (a player may first appear as a bowler).
   if (isOurs) store[k].isOurs = true;
@@ -303,16 +373,25 @@ function accumulate(store: Record<string, PlayerAgg>, r: MatchResult, isOurs: bo
 
 function computeFinalScore(state: TournamentState): number {
   const stageBonus: Record<string, number> = {
-    "Group": 5, "League": 5, "Super 8": 10, "Quarter Final": 15,
-    "Semi Final": 25, "Qualifier 1": 20, "Qualifier 2": 15, "Eliminator": 15,
-    "Final": 40, "Test 1": 15, "Test 2": 15, "Test 3": 15,
+    Group: 5,
+    League: 5,
+    "Super 8": 10,
+    "Quarter Final": 15,
+    "Semi Final": 25,
+    "Qualifier 1": 20,
+    "Qualifier 2": 15,
+    Eliminator: 15,
+    Final: 40,
+    "Test 1": 15,
+    "Test 2": 15,
+    "Test 3": 15,
   };
   return Math.round(
-    state.teamRatingSnapshot * 3
-    + state.wins * 12
-    - state.losses * 4
-    + (state.championshipWon ? 100 : 0)
-    + (stageBonus[state.finalStageReached] ?? 0),
+    state.teamRatingSnapshot * 3 +
+      state.wins * 12 -
+      state.losses * 4 +
+      (state.championshipWon ? 100 : 0) +
+      (stageBonus[state.finalStageReached] ?? 0),
   );
 }
 
@@ -329,9 +408,11 @@ export function advanceTournament(prev: TournamentState): TournamentState {
     phaseStandings: { ...prev.phaseStandings },
   };
   // Clone the agg entries too so downstream reference equality works
-  for (const k of Object.keys(state.playerStats)) state.playerStats[k] = { ...state.playerStats[k] };
+  for (const k of Object.keys(state.playerStats))
+    state.playerStats[k] = { ...state.playerStats[k] };
   for (const k of Object.keys(state.standings)) state.standings[k] = { ...state.standings[k] };
-  for (const k of Object.keys(state.phaseStandings)) state.phaseStandings[k] = { ...state.phaseStandings[k] };
+  for (const k of Object.keys(state.phaseStandings))
+    state.phaseStandings[k] = { ...state.phaseStandings[k] };
 
   let i = state.currentIndex;
   if (i >= state.fixtures.length) {
@@ -353,13 +434,29 @@ export function advanceTournament(prev: TournamentState): TournamentState {
   // User match
   let r: MatchResult;
   if (state.mode === "TEST") {
-    r = simulateTestMatch(state.ourName, state.players, fixture.opponent, fixture.stage, matchRng, state.captain);
+    r = simulateTestMatch(
+      state.ourName,
+      state.players,
+      fixture.opponent,
+      fixture.stage,
+      matchRng,
+      state.captain,
+    );
     if ((r as TestScorecard).result === "WON") state.wins++;
     else if ((r as TestScorecard).result === "LOST") state.losses++;
     else state.draws++;
   } else {
-    r = simulateLimitedMatch(state.ourName, state.players, fixture.opponent, state.mode, fixture.stage, matchRng, state.chemistryBonus);
-    if ((r as LimitedScorecard).weWon) state.wins++; else state.losses++;
+    r = simulateLimitedMatch(
+      state.ourName,
+      state.players,
+      fixture.opponent,
+      state.mode,
+      fixture.stage,
+      matchRng,
+      state.chemistryBonus,
+    );
+    if ((r as LimitedScorecard).weWon) state.wins++;
+    else state.losses++;
   }
   state.results.push(r);
   accumulate(state.playerStats, r, true);
@@ -403,7 +500,7 @@ export function advanceTournament(prev: TournamentState): TournamentState {
     state.fixtures[i + 1]?.stage === "Qualifier 2"
   ) {
     state.fixtures.splice(i + 1, 1);
-    state.stages = state.fixtures.map(f => f.stage);
+    state.stages = state.fixtures.map((f) => f.stage);
   }
 
   // Group/league qualification: derived purely from the points table (points, then NRR).
@@ -454,8 +551,8 @@ function pickKnockoutOpponent(state: TournamentState, fixture: Fixture): Opponen
   if (state.mode === "TEST" || !state.field.length) return null;
   if (!(KNOCKOUT_STAGES as string[]).includes(fixture.stage)) return null;
   const ranked = phaseTable(state)
-    .filter(r => !r.isOurs)
-    .map(r => state.field.find(o => o.name === r.name))
+    .filter((r) => !r.isOurs)
+    .map((r) => state.field.find((o) => o.name === r.name))
     .filter((o): o is Opponent => Boolean(o));
   if (!ranked.length) return null;
 
@@ -466,14 +563,21 @@ function pickKnockoutOpponent(state: TournamentState, fixture: Fixture): Opponen
 
   switch (fixture.stage) {
     // Q1 is 1st v 2nd; the Eliminator is 3rd v 4th.
-    case "Qualifier 1":  return at(ours === 1 ? 2 : 1);
-    case "Eliminator":   return at(ours === 3 ? 4 : 3);
+    case "Qualifier 1":
+      return at(ours === 1 ? 2 : 1);
+    case "Eliminator":
+      return at(ours === 3 ? 4 : 3);
     // Q2 is the Q1 loser against the Eliminator winner.
-    case "Qualifier 2":  return at(ours >= 3 ? (ours === 3 ? 2 : 1) : (ours === 1 ? 4 : 3));
-    case "Quarter Final": return at(Math.min(8, 9 - Math.min(ours, 8)));
-    case "Semi Final":   return at(5 - Math.min(ours, 4));   // 1v4, 2v3
-    case "Final":        return at(ours <= 2 ? (ours === 1 ? 2 : 1) : 1);
-    default:             return null;
+    case "Qualifier 2":
+      return at(ours >= 3 ? (ours === 3 ? 2 : 1) : ours === 1 ? 4 : 3);
+    case "Quarter Final":
+      return at(Math.min(8, 9 - Math.min(ours, 8)));
+    case "Semi Final":
+      return at(5 - Math.min(ours, 4)); // 1v4, 2v3
+    case "Final":
+      return at(ours <= 2 ? (ours === 1 ? 2 : 1) : 1);
+    default:
+      return null;
   }
 }
 
@@ -492,7 +596,7 @@ function finalizeInner(state: TournamentState): TournamentState {
     state.seriesResult = `${state.ourName} ${state.wins} — ${state.losses} ${oppName} (${state.draws} draw${state.draws === 1 ? "" : "s"})`;
     const potPool = state.wins >= state.losses ? state.players : state.fixtures[0].opponent.players;
     state.playerOfSeries = [...potPool].sort(
-      (a, b) => (b.stats.batting + b.stats.bowling) - (a.stats.batting + a.stats.bowling),
+      (a, b) => b.stats.batting + b.stats.bowling - (a.stats.batting + a.stats.bowling),
     )[0]?.name;
   }
   state.finalScore = computeFinalScore(state);
@@ -502,13 +606,13 @@ function finalizeInner(state: TournamentState): TournamentState {
 /** Sorted leaderboards, top N of each. */
 export function topRunScorers(state: TournamentState, n = 8): PlayerAgg[] {
   return Object.values(state.playerStats)
-    .filter(p => p.runs > 0)
+    .filter((p) => p.runs > 0)
     .sort((a, b) => b.runs - a.runs)
     .slice(0, n);
 }
 export function topWicketTakers(state: TournamentState, n = 8): PlayerAgg[] {
   return Object.values(state.playerStats)
-    .filter(p => p.wickets > 0)
+    .filter((p) => p.wickets > 0)
     .sort((a, b) => b.wickets - a.wickets || a.runsConceded - b.runsConceded)
     .slice(0, n);
 }
@@ -529,15 +633,18 @@ export interface CampaignAward {
  * The user's best batter and bowler, ranked inside the same tournament-wide
  * leaderboards shown on the Leaders tab (no separate stats system).
  */
-export function campaignAwards(state: TournamentState): { batter?: CampaignAward; bowler?: CampaignAward } {
+export function campaignAwards(state: TournamentState): {
+  batter?: CampaignAward;
+  bowler?: CampaignAward;
+} {
   const all = Object.values(state.playerStats);
-  const runBoard = all.filter(p => p.runs > 0).sort((a, b) => b.runs - a.runs);
+  const runBoard = all.filter((p) => p.runs > 0).sort((a, b) => b.runs - a.runs);
   const wicketBoard = all
-    .filter(p => p.wickets > 0)
+    .filter((p) => p.wickets > 0)
     .sort((a, b) => b.wickets - a.wickets || a.runsConceded - b.runsConceded);
 
-  const bat = runBoard.find(p => p.isOurs);
-  const bowl = wicketBoard.find(p => p.isOurs);
+  const bat = runBoard.find((p) => p.isOurs);
+  const bowl = wicketBoard.find((p) => p.isOurs);
 
   return {
     batter: bat && {
@@ -545,9 +652,7 @@ export function campaignAwards(state: TournamentState): { batter?: CampaignAward
       team: bat.team,
       rank: runBoard.indexOf(bat) + 1,
       runs: bat.runs,
-      average: bat.outs > 0
-        ? Math.round((bat.runs / bat.outs) * 100) / 100
-        : bat.runs,
+      average: bat.outs > 0 ? Math.round((bat.runs / bat.outs) * 100) / 100 : bat.runs,
       strikeRate: bat.balls > 0 ? Math.round((bat.runs * 100) / bat.balls) : 0,
     },
     bowler: bowl && {
@@ -555,9 +660,10 @@ export function campaignAwards(state: TournamentState): { batter?: CampaignAward
       team: bowl.team,
       rank: wicketBoard.indexOf(bowl) + 1,
       wickets: bowl.wickets,
-      economy: bowl.ballsBowled > 0
-        ? Math.round((bowl.runsConceded * 6 / bowl.ballsBowled) * 100) / 100
-        : 0,
+      economy:
+        bowl.ballsBowled > 0
+          ? Math.round(((bowl.runsConceded * 6) / bowl.ballsBowled) * 100) / 100
+          : 0,
     },
   };
 }

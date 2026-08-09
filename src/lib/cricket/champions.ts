@@ -16,9 +16,30 @@ const KEY = "cricketxi.champions.v1";
 const MAX = 12;
 
 const SEED: ChampionEntry[] = [
-  { id: "seed-1", teamName: "Mumbai Mavericks", tournament: "Franchise League 2023", achievement: "Won Franchise League 2023", score: 9420, date: "2023-05-28T00:00:00.000Z" },
-  { id: "seed-2", teamName: "Invincibles XI",   tournament: "ODI World Cup 2011",    achievement: "Won ODI World Cup 2011",    score: 8870, date: "2011-04-02T00:00:00.000Z" },
-  { id: "seed-3", teamName: "Karachi Kingsmen", tournament: "T20 World Cup 2009",    achievement: "Won T20 World Cup 2009",    score: 8410, date: "2009-06-21T00:00:00.000Z" },
+  {
+    id: "seed-1",
+    teamName: "Mumbai Mavericks",
+    tournament: "Franchise League 2023",
+    achievement: "Won Franchise League 2023",
+    score: 9420,
+    date: "2023-05-28T00:00:00.000Z",
+  },
+  {
+    id: "seed-2",
+    teamName: "Invincibles XI",
+    tournament: "ODI World Cup 2011",
+    achievement: "Won ODI World Cup 2011",
+    score: 8870,
+    date: "2011-04-02T00:00:00.000Z",
+  },
+  {
+    id: "seed-3",
+    teamName: "Karachi Kingsmen",
+    tournament: "T20 World Cup 2009",
+    achievement: "Won T20 World Cup 2009",
+    score: 8410,
+    date: "2009-06-21T00:00:00.000Z",
+  },
 ];
 
 function safeRead(): ChampionEntry[] {
@@ -39,7 +60,9 @@ export function listChampions(limit = 3): ChampionEntry[] {
   return [...real, ...SEED].slice(0, limit);
 }
 
-export function recordChampion(entry: Omit<ChampionEntry, "id" | "date"> & { date?: string }): void {
+export function recordChampion(
+  entry: Omit<ChampionEntry, "id" | "date"> & { date?: string },
+): void {
   if (typeof window === "undefined") return;
   const record: ChampionEntry = {
     ...entry,
