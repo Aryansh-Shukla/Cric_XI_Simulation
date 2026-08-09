@@ -1,4 +1,14 @@
-import type { Player, Pitch, Weather, Innings, LimitedScorecard, StageKind, GameMode, FullInnings, SuperOver } from "../types";
+import type {
+  Player,
+  Pitch,
+  Weather,
+  Innings,
+  LimitedScorecard,
+  StageKind,
+  GameMode,
+  FullInnings,
+  SuperOver,
+} from "../types";
 import { KNOCKOUT_STAGES } from "../types";
 import { attrs, battingOrder, bowlingPool, wicketkeeper } from "./attributes";
 import { clamp, pick, Rng, weightedPick } from "./rng";
@@ -59,14 +69,14 @@ function phaseFor(format: Format, over: number): { phase: Phase; rpo: number; wk
     return { phase: "DEATH", rpo: 10.6, wkt: 0.062 };
   }
   if (over < 10) return { phase: "PP", rpo: 5.2, wkt: 0.024 };
-  if (over < 30) return { phase: "MID", rpo: 5.4, wkt: 0.020 };
+  if (over < 30) return { phase: "MID", rpo: 5.4, wkt: 0.02 };
   if (over < 40) return { phase: "ACCEL", rpo: 7.0, wkt: 0.028 };
-  return { phase: "DEATH", rpo: 9.4, wkt: 0.050 };
+  return { phase: "DEATH", rpo: 9.4, wkt: 0.05 };
 }
 
 export function eraMultiplier(year: number, mode: GameMode): number {
   if (mode === "T20_WC" || mode === "FRANCHISE_T20") {
-    if (year < 2010) return 0.90;
+    if (year < 2010) return 0.9;
     if (year < 2016) return 0.97;
     return 1.03;
   }
@@ -81,20 +91,29 @@ export function eraMultiplier(year: number, mode: GameMode): number {
 
 function pitchFactors(pitch: Pitch) {
   switch (pitch) {
-    case "Flat":    return { bat: 1.10, wkt: 0.82 };
-    case "Green":   return { bat: 0.90, wkt: 1.25 };
-    case "Dusty":   return { bat: 0.95, wkt: 1.10 };
-    case "Turning": return { bat: 0.93, wkt: 1.18 };
-    case "Slow":    return { bat: 0.92, wkt: 1.05 };
+    case "Flat":
+      return { bat: 1.1, wkt: 0.82 };
+    case "Green":
+      return { bat: 0.9, wkt: 1.25 };
+    case "Dusty":
+      return { bat: 0.95, wkt: 1.1 };
+    case "Turning":
+      return { bat: 0.93, wkt: 1.18 };
+    case "Slow":
+      return { bat: 0.92, wkt: 1.05 };
   }
 }
 
 function weatherFactors(w: Weather) {
   switch (w) {
-    case "Sunny":       return { bat: 1.02, wkt: 0.98 };
-    case "Cloudy":      return { bat: 0.96, wkt: 1.08 };
-    case "Humid":       return { bat: 0.98, wkt: 1.05 };
-    case "Night Match": return { bat: 1.03, wkt: 0.95 }; // dew helps batting/chasing
+    case "Sunny":
+      return { bat: 1.02, wkt: 0.98 };
+    case "Cloudy":
+      return { bat: 0.96, wkt: 1.08 };
+    case "Humid":
+      return { bat: 0.98, wkt: 1.05 };
+    case "Night Match":
+      return { bat: 1.03, wkt: 0.95 }; // dew helps batting/chasing
   }
 }
 
@@ -167,17 +186,30 @@ function ballOutcome(
   if (rng() < pWkt) {
     const roll = rng();
     const dismissal =
-      roll < 0.32 ? "c" :
-      roll < 0.55 ? "b" :
-      roll < 0.72 ? "lbw" :
-      roll < 0.88 ? "c wk" :
-      roll < 0.95 ? "run out" :
-      wA.isSpin ? "st" : "c&b";
+      roll < 0.32
+        ? "c"
+        : roll < 0.55
+          ? "b"
+          : roll < 0.72
+            ? "lbw"
+            : roll < 0.88
+              ? "c wk"
+              : roll < 0.95
+                ? "run out"
+                : wA.isSpin
+                  ? "st"
+                  : "c&b";
     return { runs: 0, wicket: true, dismissal };
   }
 
   // Build outcome distribution around meanRpb
-  const p6 = clamp(0.02 + (meanRpb - 0.8) * 0.11 + (bA.hasTrait("Powerplay Destroyer") && ph.phase === "PP" ? 0.03 : 0), 0.005, 0.20);
+  const p6 = clamp(
+    0.02 +
+      (meanRpb - 0.8) * 0.11 +
+      (bA.hasTrait("Powerplay Destroyer") && ph.phase === "PP" ? 0.03 : 0),
+    0.005,
+    0.2,
+  );
   const p4 = clamp(0.08 + (meanRpb - 0.8) * 0.14, 0.03, 0.24);
   const p2 = 0.06;
   const p3 = 0.008;
@@ -188,10 +220,14 @@ function ballOutcome(
   const r = rng();
   let cum = p0;
   if (r < cum) return { runs: 0, wicket: false };
-  cum += p1; if (r < cum) return { runs: 1, wicket: false };
-  cum += p2; if (r < cum) return { runs: 2, wicket: false };
-  cum += p3; if (r < cum) return { runs: 3, wicket: false };
-  cum += p4; if (r < cum) return { runs: 4, wicket: false };
+  cum += p1;
+  if (r < cum) return { runs: 1, wicket: false };
+  cum += p2;
+  if (r < cum) return { runs: 2, wicket: false };
+  cum += p3;
+  if (r < cum) return { runs: 3, wicket: false };
+  cum += p4;
+  if (r < cum) return { runs: 4, wicket: false };
   return { runs: 6, wicket: false };
 }
 
@@ -207,16 +243,16 @@ function pickBowler(
 ): Player {
   const maxBalls = (format === "T20" ? 4 : 10) * 6;
   const ph = phaseFor(format, over).phase;
-  const eligible = bowlers.filter(b => {
+  const eligible = bowlers.filter((b) => {
     const st = states.get(b.id)!;
     return st.balls < maxBalls && b.id !== lastBowlerId;
   });
   if (!eligible.length) {
     // last resort: allow back-to-back (shouldn't happen in a legal match; fall back to any with balls left)
-    const any = bowlers.filter(b => states.get(b.id)!.balls < maxBalls);
+    const any = bowlers.filter((b) => states.get(b.id)!.balls < maxBalls);
     return any[0] ?? bowlers[0];
   }
-  const weights = eligible.map(b => {
+  const weights = eligible.map((b) => {
     const a = attrs(b);
     const skill = skillFor(a, ph, "bowl");
     const remaining = maxBalls - states.get(b.id)!.balls;
@@ -248,14 +284,24 @@ export function simulateInnings(
   const bowlers = bowlingPool(bowling);
   const fielding = bowling.reduce((s, p) => s + p.stats.fielding, 0) / bowling.length;
 
-  const batters: BatterState[] = order.map(p => ({
-    p, runs: 0, balls: 0, fours: 0, sixes: 0, out: false,
+  const batters: BatterState[] = order.map((p) => ({
+    p,
+    runs: 0,
+    balls: 0,
+    fours: 0,
+    sixes: 0,
+    out: false,
   }));
   const bowlerStates = new Map<string, BowlerState>();
-  for (const b of bowlers) bowlerStates.set(b.id, { p: b, balls: 0, runs: 0, wickets: 0, maidens: 0 });
+  for (const b of bowlers)
+    bowlerStates.set(b.id, { p: b, balls: 0, runs: 0, wickets: 0, maidens: 0 });
 
-  let striker = 0, nonStriker = 1, nextBat = 2;
-  let runs = 0, wickets = 0, balls = 0;
+  let striker = 0,
+    nonStriker = 1,
+    nextBat = 2;
+  let runs = 0,
+    wickets = 0,
+    balls = 0;
   const events: MatchEvent[] = [];
   const fall: InningsState["fallOfWickets"] = [];
   const partnerships: InningsState["partnerships"] = [];
@@ -263,8 +309,7 @@ export function simulateInnings(
   let lastBowlerId: string | null = null;
   let chased = false;
 
-  outer:
-  for (let over = 0; over < maxOvers; over++) {
+  outer: for (let over = 0; over < maxOvers; over++) {
     const bowler = pickBowler(bowlers, bowlerStates, lastBowlerId, over, ctx.format, rng);
     lastBowlerId = bowler.id;
     const bwState = bowlerStates.get(bowler.id)!;
@@ -272,15 +317,31 @@ export function simulateInnings(
 
     for (let bn = 0; bn < 6; bn++) {
       if (wickets >= 10) break outer;
-      if (target !== undefined && runs >= target) { chased = true; break outer; }
+      if (target !== undefined && runs >= target) {
+        chased = true;
+        break outer;
+      }
 
       const batState = batters[striker];
       const ballsLeft = maxOvers * 6 - balls;
-      const out = ballOutcome(batState, bwState, {
-        format: ctx.format, over, pitch: ctx.pitch, weather: ctx.weather, era: ctx.era,
-        target, currentRuns: runs, ballsLeft, wicketsDown: wickets, fielding,
-        chemistryBonus: ctx.chemistryBonus,
-      }, rng);
+      const out = ballOutcome(
+        batState,
+        bwState,
+        {
+          format: ctx.format,
+          over,
+          pitch: ctx.pitch,
+          weather: ctx.weather,
+          era: ctx.era,
+          target,
+          currentRuns: runs,
+          ballsLeft,
+          wicketsDown: wickets,
+          fielding,
+          chemistryBonus: ctx.chemistryBonus,
+        },
+        rng,
+      );
 
       balls++;
       batState.balls++;
@@ -297,9 +358,24 @@ export function simulateInnings(
         if (nextBat < batters.length) {
           striker = nextBat;
           nextBat++;
-          curPart = { a: batters[striker].p.name, b: batters[nonStriker].p.name, runs: 0, balls: 0 };
+          curPart = {
+            a: batters[striker].p.name,
+            b: batters[nonStriker].p.name,
+            runs: 0,
+            balls: 0,
+          };
         }
-        events.push({ over, ball: bn + 1, batter: batState.p, bowler: bwState.p, runs: 0, wicket: true, dismissal: out.dismissal, phase, desc: "" });
+        events.push({
+          over,
+          ball: bn + 1,
+          batter: batState.p,
+          bowler: bwState.p,
+          runs: 0,
+          wicket: true,
+          dismissal: out.dismissal,
+          phase,
+          desc: "",
+        });
       } else {
         runs += out.runs;
         bwState.runs += out.runs;
@@ -309,7 +385,16 @@ export function simulateInnings(
         if (out.runs === 6) batState.sixes++;
         curPart.runs += out.runs;
         curPart.balls++;
-        events.push({ over, ball: bn + 1, batter: batState.p, bowler: bwState.p, runs: out.runs, wicket: false, phase, desc: "" });
+        events.push({
+          over,
+          ball: bn + 1,
+          batter: batState.p,
+          bowler: bwState.p,
+          runs: out.runs,
+          wicket: false,
+          phase,
+          desc: "",
+        });
         if (out.runs % 2 === 1) [striker, nonStriker] = [nonStriker, striker];
       }
     }
@@ -318,15 +403,26 @@ export function simulateInnings(
     if (overRuns === 0 && bwState.balls >= 6) bwState.maidens++;
   }
 
-  if (curPart.balls > 0 && (partnerships.length === 0 || partnerships[partnerships.length - 1] !== curPart)) {
+  if (
+    curPart.balls > 0 &&
+    (partnerships.length === 0 || partnerships[partnerships.length - 1] !== curPart)
+  ) {
     partnerships.push({ ...curPart });
   }
 
   return {
-    teamName, runs, wickets, balls,
-    batters, bowlers: bowlerStates,
-    partnerships, fallOfWickets: fall, events,
-    target, chased, format: ctx.format,
+    teamName,
+    runs,
+    wickets,
+    balls,
+    batters,
+    bowlers: bowlerStates,
+    partnerships,
+    fallOfWickets: fall,
+    events,
+    target,
+    chased,
+    format: ctx.format,
   };
 }
 
@@ -338,15 +434,17 @@ function oversFromBalls(balls: number) {
 
 export function summariseInnings(s: InningsState): Innings {
   const overs = Math.round(oversFromBalls(s.balls) * 10) / 10;
-  const runRate = s.balls > 0 ? Math.round((s.runs * 6 / s.balls) * 100) / 100 : 0;
+  const runRate = s.balls > 0 ? Math.round(((s.runs * 6) / s.balls) * 100) / 100 : 0;
   const topBatter =
-    [...s.batters].filter(b => b.balls > 0).sort((a, b) => b.runs - a.runs)[0] ?? s.batters[0];
-  const bowlerArr = Array.from(s.bowlers.values()).filter(b => b.balls > 0);
-  const bestBowler =
-    bowlerArr.sort((a, b) => b.wickets - a.wickets || a.runs - b.runs)[0] ?? null;
-  const topPart =
-    [...s.partnerships].sort((a, b) => b.runs - a.runs)[0] ??
-    { a: s.batters[0].p.name, b: s.batters[1]?.p.name ?? s.batters[0].p.name, runs: 0, balls: 0 };
+    [...s.batters].filter((b) => b.balls > 0).sort((a, b) => b.runs - a.runs)[0] ?? s.batters[0];
+  const bowlerArr = Array.from(s.bowlers.values()).filter((b) => b.balls > 0);
+  const bestBowler = bowlerArr.sort((a, b) => b.wickets - a.wickets || a.runs - b.runs)[0] ?? null;
+  const topPart = [...s.partnerships].sort((a, b) => b.runs - a.runs)[0] ?? {
+    a: s.batters[0].p.name,
+    b: s.batters[1]?.p.name ?? s.batters[0].p.name,
+    runs: 0,
+    balls: 0,
+  };
 
   return {
     teamName: s.teamName,
@@ -371,8 +469,8 @@ export function summariseInnings(s: InningsState): Innings {
 export function toFullInnings(s: InningsState, label?: string): FullInnings {
   const overs = Math.round(oversFromBalls(s.balls) * 10) / 10;
   const batters = s.batters
-    .filter(b => b.balls > 0 || b.out)
-    .map(b => ({
+    .filter((b) => b.balls > 0 || b.out)
+    .map((b) => ({
       name: b.p.name,
       runs: b.runs,
       balls: b.balls,
@@ -381,13 +479,15 @@ export function toFullInnings(s: InningsState, label?: string): FullInnings {
       out: b.out,
       how: b.dismissal
         ? `${b.dismissal.how}${b.dismissal.bowler ? " b " + b.dismissal.bowler.name : ""}`
-        : (b.balls > 0 ? "not out" : undefined),
+        : b.balls > 0
+          ? "not out"
+          : undefined,
     }));
   const bowlers = Array.from(s.bowlers.values())
-    .filter(b => b.balls > 0)
-    .map(b => {
+    .filter((b) => b.balls > 0)
+    .map((b) => {
       const ov = Math.round(oversFromBalls(b.balls) * 10) / 10;
-      const econ = b.balls > 0 ? Math.round((b.runs * 6 / b.balls) * 100) / 100 : 0;
+      const econ = b.balls > 0 ? Math.round(((b.runs * 6) / b.balls) * 100) / 100 : 0;
       return {
         name: b.p.name,
         overs: ov,
@@ -404,14 +504,19 @@ export function toFullInnings(s: InningsState, label?: string): FullInnings {
     overs,
     batters,
     bowlers,
-    fall: s.fallOfWickets.map(f => ({ ...f })),
+    fall: s.fallOfWickets.map((f) => ({ ...f })),
     label,
   };
 }
 
 /* ---------- Toss ---------- */
 
-export function decideToss(pitch: Pitch, weather: Weather, format: Format, rng: Rng): {
+export function decideToss(
+  pitch: Pitch,
+  weather: Weather,
+  format: Format,
+  rng: Rng,
+): {
   winner: "us" | "opp";
   decision: "bat" | "bowl";
 } {
@@ -420,7 +525,7 @@ export function decideToss(pitch: Pitch, weather: Weather, format: Format, rng: 
   if (pitch === "Flat") batBias += 0.15;
   if (pitch === "Green") batBias -= 0.22;
   if (pitch === "Turning") batBias += 0.05;
-  if (weather === "Cloudy") batBias -= 0.10;
+  if (weather === "Cloudy") batBias -= 0.1;
   if (weather === "Night Match") batBias -= 0.18; // dew, chase
   if (weather === "Sunny") batBias += 0.05;
   if (format === "T20") batBias -= 0.05;
@@ -430,7 +535,12 @@ export function decideToss(pitch: Pitch, weather: Weather, format: Format, rng: 
 
 /* ---------- Margin / winner ---------- */
 
-export function limitedMargin(weWon: boolean, weBattedFirst: boolean, ourInn: Innings, oppInn: Innings): string {
+export function limitedMargin(
+  weWon: boolean,
+  weBattedFirst: boolean,
+  ourInn: Innings,
+  oppInn: Innings,
+): string {
   const winnerBattedSecond = weWon ? !weBattedFirst : weBattedFirst;
   if (winnerBattedSecond) {
     const winInn = weWon ? ourInn : oppInn;
@@ -443,34 +553,42 @@ export function limitedMargin(weWon: boolean, weBattedFirst: boolean, ourInn: In
 
 /* ---------- Player of the match ---------- */
 
-export function pickPlayerOfMatch(winnerBatters: BatterState[], winnerBowlerStates: BowlerState[]): string {
+export function pickPlayerOfMatch(
+  winnerBatters: BatterState[],
+  winnerBowlerStates: BowlerState[],
+): string {
   const topBat = [...winnerBatters].sort((a, b) => b.runs - a.runs)[0];
   const batScore = topBat ? topBat.runs + topBat.fours * 2 + topBat.sixes * 3 : 0;
-  const bestBowl = [...winnerBowlerStates].sort((a, b) =>
-    (b.wickets * 25 - b.runs) - (a.wickets * 25 - a.runs),
+  const bestBowl = [...winnerBowlerStates].sort(
+    (a, b) => b.wickets * 25 - b.runs - (a.wickets * 25 - a.runs),
   )[0];
   const bowlScore = bestBowl ? bestBowl.wickets * 30 - bestBowl.runs * 0.6 : 0;
-  return batScore >= bowlScore ? (topBat?.p.name ?? bestBowl?.p.name ?? "—") : (bestBowl?.p.name ?? topBat?.p.name ?? "—");
+  return batScore >= bowlScore
+    ? (topBat?.p.name ?? bestBowl?.p.name ?? "—")
+    : (bestBowl?.p.name ?? topBat?.p.name ?? "—");
 }
 
 /* ---------- Commentary from events ---------- */
 
 const TOSS_LINES = [
-  (t: string, d: string, p: string) => `${t} called it right at the toss and elected to ${d} on a ${p.toLowerCase()} deck.`,
-  (t: string, d: string, p: string) => `Coin lands ${t}'s way — ${d}ting first looks the play on this ${p.toLowerCase()} surface.`,
-  (t: string, d: string, p: string) => `${t} won the toss and had no hesitation choosing to ${d} on the ${p.toLowerCase()} strip.`,
+  (t: string, d: string, p: string) =>
+    `${t} called it right at the toss and elected to ${d} on a ${p.toLowerCase()} deck.`,
+  (t: string, d: string, p: string) =>
+    `Coin lands ${t}'s way — ${d}ting first looks the play on this ${p.toLowerCase()} surface.`,
+  (t: string, d: string, p: string) =>
+    `${t} won the toss and had no hesitation choosing to ${d} on the ${p.toLowerCase()} strip.`,
 ];
 
 function ppStats(events: MatchEvent[], format: Format) {
   const end = format === "T20" ? 6 : 10;
-  const pp = events.filter(e => e.over < end);
-  return { runs: pp.reduce((s, e) => s + e.runs, 0), wkts: pp.filter(e => e.wicket).length };
+  const pp = events.filter((e) => e.over < end);
+  return { runs: pp.reduce((s, e) => s + e.runs, 0), wkts: pp.filter((e) => e.wicket).length };
 }
 
 function deathStats(events: MatchEvent[], format: Format) {
   const start = format === "T20" ? 15 : 40;
-  const d = events.filter(e => e.over >= start);
-  return { runs: d.reduce((s, e) => s + e.runs, 0), wkts: d.filter(e => e.wicket).length };
+  const d = events.filter((e) => e.over >= start);
+  return { runs: d.reduce((s, e) => s + e.runs, 0), wkts: d.filter((e) => e.wicket).length };
 }
 
 export function limitedCommentaryFromEvents(
@@ -488,9 +606,13 @@ export function limitedCommentaryFromEvents(
   // Powerplay
   const pp = ppStats(firstState.events, r.format);
   if (pp.wkts >= 3) {
-    lines.push(`${firstInn.teamName} slumped to ${pp.runs}/${pp.wkts} inside the powerplay — the new ball did serious damage.`);
+    lines.push(
+      `${firstInn.teamName} slumped to ${pp.runs}/${pp.wkts} inside the powerplay — the new ball did serious damage.`,
+    );
   } else if (pp.runs >= (r.format === "T20" ? 55 : 65)) {
-    lines.push(`${firstInn.teamName} exploded out of the blocks — ${pp.runs}/${pp.wkts} at the end of the powerplay.`);
+    lines.push(
+      `${firstInn.teamName} exploded out of the blocks — ${pp.runs}/${pp.wkts} at the end of the powerplay.`,
+    );
   } else {
     lines.push(`${firstInn.teamName} settled through the powerplay for ${pp.runs}/${pp.wkts}.`);
   }
@@ -498,10 +620,15 @@ export function limitedCommentaryFromEvents(
   // Top scorer
   const top = [...firstState.batters].sort((a, b) => b.runs - a.runs)[0];
   if (top && top.runs >= 100) {
-    lines.push(`${top.p.name} raised a stunning hundred (${top.runs} off ${top.balls}, ${top.fours}×4, ${top.sixes}×6).`);
+    lines.push(
+      `${top.p.name} raised a stunning hundred (${top.runs} off ${top.balls}, ${top.fours}×4, ${top.sixes}×6).`,
+    );
   } else if (top && top.runs >= 50) {
     const sr = top.balls ? Math.round((top.runs * 100) / top.balls) : 0;
-    if (sr >= 140) lines.push(`${top.p.name} tore into the attack — ${top.runs} off ${top.balls} at a strike rate of ${sr}.`);
+    if (sr >= 140)
+      lines.push(
+        `${top.p.name} tore into the attack — ${top.runs} off ${top.balls} at a strike rate of ${sr}.`,
+      );
     else lines.push(`${top.p.name} anchored with ${top.runs} off ${top.balls}.`);
   } else if (top && top.runs >= 30) {
     lines.push(`${top.p.name} top-scored with ${top.runs} but no one really kicked on.`);
@@ -509,19 +636,27 @@ export function limitedCommentaryFromEvents(
 
   // Best bowler defending / bowling first
   const firstBowlers = Array.from(firstState.bowlers.values())
-    .filter(b => b.balls > 0)
+    .filter((b) => b.balls > 0)
     .sort((a, b) => b.wickets - a.wickets || a.runs - b.runs);
   const b1 = firstBowlers[0];
-  if (b1 && b1.wickets >= 5) lines.push(`${b1.p.name} tore through the middle order — ${b1.wickets}/${b1.runs}.`);
-  else if (b1 && b1.wickets >= 3) lines.push(`${b1.p.name} led the attack with ${b1.wickets}/${b1.runs} in ${Math.round(oversFromBalls(b1.balls) * 10) / 10}.`);
+  if (b1 && b1.wickets >= 5)
+    lines.push(`${b1.p.name} tore through the middle order — ${b1.wickets}/${b1.runs}.`);
+  else if (b1 && b1.wickets >= 3)
+    lines.push(
+      `${b1.p.name} led the attack with ${b1.wickets}/${b1.runs} in ${Math.round(oversFromBalls(b1.balls) * 10) / 10}.`,
+    );
 
   // Death overs summary
   const death = deathStats(firstState.events, r.format);
-  if (r.format === "T20" && death.runs >= 55) lines.push(`A brutal death: ${death.runs} runs came off the last five overs.`);
-  else if (r.format === "ODI" && death.runs >= 90) lines.push(`Death overs went the distance — ${death.runs} runs off the final ten.`);
+  if (r.format === "T20" && death.runs >= 55)
+    lines.push(`A brutal death: ${death.runs} runs came off the last five overs.`);
+  else if (r.format === "ODI" && death.runs >= 90)
+    lines.push(`Death overs went the distance — ${death.runs} runs off the final ten.`);
 
   // Innings break
-  lines.push(`Innings break: ${firstInn.teamName} ${firstInn.runs}/${firstInn.wickets} (${firstInn.overs}). ${secondInn.teamName} chasing ${firstInn.runs + 1}.`);
+  lines.push(
+    `Innings break: ${firstInn.teamName} ${firstInn.runs}/${firstInn.wickets} (${firstInn.overs}). ${secondInn.teamName} chasing ${firstInn.runs + 1}.`,
+  );
 
   // Chase / defense
   const target = firstInn.runs + 1;
@@ -532,24 +667,37 @@ export function limitedCommentaryFromEvents(
   const wktsLeft = 10 - secondInn.wickets;
 
   if (chaseWon) {
-    if (ballsLeft <= 6) lines.push(`Down to the wire! ${secondInn.teamName} got home with ${ballsLeft} ball${ballsLeft === 1 ? "" : "s"} to spare.`);
-    else if (wktsLeft >= 6) lines.push(`${secondInn.teamName} cruised over the line with ${wktsLeft} wickets in hand.`);
+    if (ballsLeft <= 6)
+      lines.push(
+        `Down to the wire! ${secondInn.teamName} got home with ${ballsLeft} ball${ballsLeft === 1 ? "" : "s"} to spare.`,
+      );
+    else if (wktsLeft >= 6)
+      lines.push(`${secondInn.teamName} cruised over the line with ${wktsLeft} wickets in hand.`);
     else lines.push(`${secondInn.teamName} rebuilt after early stumbles and completed the chase.`);
 
     const chaseTop = [...secondState.batters].sort((a, b) => b.runs - a.runs)[0];
     if (chaseTop && chaseTop.runs >= 50) {
-      lines.push(`${chaseTop.p.name} anchored the chase with ${chaseTop.runs} off ${chaseTop.balls}.`);
+      lines.push(
+        `${chaseTop.p.name} anchored the chase with ${chaseTop.runs} off ${chaseTop.balls}.`,
+      );
     }
   } else {
     const short = target - 1 - secondInn.runs;
-    if (secondInn.wickets === 10) lines.push(`${secondInn.teamName} were bowled out ${short} run${short === 1 ? "" : "s"} short.`);
-    else if (short <= 10) lines.push(`Heartbreak — ${secondInn.teamName} fell just ${short} short.`);
+    if (secondInn.wickets === 10)
+      lines.push(
+        `${secondInn.teamName} were bowled out ${short} run${short === 1 ? "" : "s"} short.`,
+      );
+    else if (short <= 10)
+      lines.push(`Heartbreak — ${secondInn.teamName} fell just ${short} short.`);
     else lines.push(`${secondInn.teamName} were kept in check and finished ${short} adrift.`);
 
     const defBowlers = Array.from(secondState.bowlers.values())
-      .filter(b => b.balls > 0).sort((a, b) => b.wickets - a.wickets);
+      .filter((b) => b.balls > 0)
+      .sort((a, b) => b.wickets - a.wickets);
     if (defBowlers[0] && defBowlers[0].wickets >= 3) {
-      lines.push(`${defBowlers[0].p.name} sealed the defence with ${defBowlers[0].wickets}/${defBowlers[0].runs}.`);
+      lines.push(
+        `${defBowlers[0].p.name} sealed the defence with ${defBowlers[0].wickets}/${defBowlers[0].runs}.`,
+      );
     }
   }
 
@@ -570,11 +718,19 @@ const WEATHERS: Weather[] = ["Sunny", "Cloudy", "Humid", "Night Match"];
 
 /** Global (international) venue pool — used by ICC events. */
 const INTERNATIONAL_VENUES = [
-  "Wankhede, Mumbai", "Eden Gardens, Kolkata", "MCG, Melbourne",
-  "Lord's, London", "SCG, Sydney", "Newlands, Cape Town",
-  "Chinnaswamy, Bengaluru", "Gaddafi, Lahore", "R. Premadasa, Colombo",
-  "Kensington Oval, Bridgetown", "Basin Reserve, Wellington",
-  "Trent Bridge, Nottingham", "Adelaide Oval",
+  "Wankhede, Mumbai",
+  "Eden Gardens, Kolkata",
+  "MCG, Melbourne",
+  "Lord's, London",
+  "SCG, Sydney",
+  "Newlands, Cape Town",
+  "Chinnaswamy, Bengaluru",
+  "Gaddafi, Lahore",
+  "R. Premadasa, Colombo",
+  "Kensington Oval, Bridgetown",
+  "Basin Reserve, Wellington",
+  "Trent Bridge, Nottingham",
+  "Adelaide Oval",
 ];
 
 /**
@@ -583,15 +739,24 @@ const INTERNATIONAL_VENUES = [
  */
 const FRANCHISE_VENUES = [
   // India
-  "Wankhede, Mumbai", "Eden Gardens, Kolkata", "M. A. Chidambaram, Chennai",
-  "Narendra Modi Stadium, Ahmedabad", "M. Chinnaswamy, Bengaluru",
-  "Arun Jaitley Stadium, Delhi", "Rajiv Gandhi Stadium, Hyderabad",
-  "Sawai Mansingh, Jaipur", "PCA Stadium, Mohali", "Ekana Stadium, Lucknow",
+  "Wankhede, Mumbai",
+  "Eden Gardens, Kolkata",
+  "M. A. Chidambaram, Chennai",
+  "Narendra Modi Stadium, Ahmedabad",
+  "M. Chinnaswamy, Bengaluru",
+  "Arun Jaitley Stadium, Delhi",
+  "Rajiv Gandhi Stadium, Hyderabad",
+  "Sawai Mansingh, Jaipur",
+  "PCA Stadium, Mohali",
+  "Ekana Stadium, Lucknow",
   // South Africa
-  "The Wanderers, Johannesburg", "Kingsmead, Durban", "Newlands, Cape Town",
+  "The Wanderers, Johannesburg",
+  "Kingsmead, Durban",
+  "Newlands, Cape Town",
   "SuperSport Park, Centurion",
   // UAE
-  "Dubai International Stadium", "Sheikh Zayed Stadium, Abu Dhabi",
+  "Dubai International Stadium",
+  "Sheikh Zayed Stadium, Abu Dhabi",
   "Sharjah Cricket Stadium",
 ];
 
@@ -601,8 +766,10 @@ export function venuePool(mode: GameMode): string[] {
 
 /** Six legal deliveries a side, two wickets and you're done. Decided, never tied. */
 function simulateSuperOver(
-  ourName: string, ourPlayers: Player[],
-  oppName: string, oppPlayers: Player[],
+  ourName: string,
+  ourPlayers: Player[],
+  oppName: string,
+  oppPlayers: Player[],
   rng: Rng,
 ): SuperOver {
   const strength = (ps: Player[]) => {
@@ -611,10 +778,14 @@ function simulateSuperOver(
   };
   const sideScore = (ps: Player[]) => {
     const base = 6 + (strength(ps) - 70) / 6;
-    let runs = 0, wickets = 0;
+    let runs = 0,
+      wickets = 0;
     for (let b = 0; b < 6 && wickets < 2; b++) {
       const roll = rng();
-      if (roll < 0.12) { wickets++; continue; }
+      if (roll < 0.12) {
+        wickets++;
+        continue;
+      }
       runs += Math.max(0, Math.round(base / 6 + (rng() * 5 - 1.4)));
     }
     return { runs, wickets };
@@ -655,9 +826,14 @@ export function simulateLimitedMatch(
     (toss.winner === "us" && toss.decision === "bat") ||
     (toss.winner === "opp" && toss.decision === "bowl");
 
-  const yearHint = format === "T20"
-    ? (mode === "FRANCHISE_T20" ? 2020 : 2018)
-    : (mode === "CHAMPIONS" ? 2017 : 2015);
+  const yearHint =
+    format === "T20"
+      ? mode === "FRANCHISE_T20"
+        ? 2020
+        : 2018
+      : mode === "CHAMPIONS"
+        ? 2017
+        : 2015;
   const era = eraMultiplier(yearHint, mode);
 
   const ctx: SimContext = { format, pitch, weather, era, chemistryBonus };

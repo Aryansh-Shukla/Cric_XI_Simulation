@@ -64,19 +64,19 @@
 :root {
   --radius: 0.9rem;
   /* Dark-only design tokens for Cricket XI */
-  --background: oklch(0.17 0.02 260);     /* #0D1117 */
+  --background: oklch(0.17 0.02 260); /* #0D1117 */
   --foreground: oklch(0.98 0 0);
-  --card: oklch(0.22 0.02 260);           /* #161B22 */
+  --card: oklch(0.22 0.02 260); /* #161B22 */
   --card-foreground: oklch(0.98 0 0);
   --popover: oklch(0.22 0.02 260);
   --popover-foreground: oklch(0.98 0 0);
-  --primary: oklch(0.78 0.14 85);          /* Gold #D4AF37 */
+  --primary: oklch(0.78 0.14 85); /* Gold #D4AF37 */
   --primary-foreground: oklch(0.17 0.02 260);
   --secondary: oklch(0.27 0.02 260);
   --secondary-foreground: oklch(0.98 0 0);
   --muted: oklch(0.27 0.02 260);
   --muted-foreground: oklch(0.7 0.02 260);
-  --accent: oklch(0.72 0.18 150);          /* Emerald #2ECC71 */
+  --accent: oklch(0.72 0.18 150); /* Emerald #2ECC71 */
   --accent-foreground: oklch(0.17 0.02 260);
   --destructive: oklch(0.6 0.22 27);
   --destructive-foreground: oklch(0.98 0 0);
@@ -101,8 +101,9 @@
   --emerald: oklch(0.72 0.18 150);
   --gradient-gold: linear-gradient(135deg, oklch(0.82 0.14 85), oklch(0.68 0.14 70));
   --gradient-emerald: linear-gradient(135deg, oklch(0.75 0.18 150), oklch(0.6 0.18 160));
-  --gradient-hero: radial-gradient(ellipse at top, oklch(0.28 0.05 150 / 40%), transparent 60%),
-                   radial-gradient(ellipse at bottom, oklch(0.28 0.08 85 / 25%), transparent 60%);
+  --gradient-hero:
+    radial-gradient(ellipse at top, oklch(0.28 0.05 150 / 40%), transparent 60%),
+    radial-gradient(ellipse at bottom, oklch(0.28 0.08 85 / 25%), transparent 60%);
   --shadow-gold: 0 0 40px oklch(0.78 0.14 85 / 30%);
   --shadow-emerald: 0 0 40px oklch(0.72 0.18 150 / 30%);
   --shadow-card: 0 10px 30px -12px oklch(0 0 0 / 60%);
@@ -151,10 +152,16 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family:
+      "Inter",
+      system-ui,
+      -apple-system,
+      sans-serif;
     -webkit-font-smoothing: antialiased;
   }
-  html { color-scheme: dark; }
+  html {
+    color-scheme: dark;
+  }
 }
 
 @utility glass-card {
@@ -181,9 +188,18 @@
   color: var(--primary-foreground);
   border: 1px solid color-mix(in oklab, var(--gold) 60%, transparent);
   box-shadow: 0 8px 24px -8px oklch(0.78 0.14 85 / 45%);
-  transition: transform 200ms ease, box-shadow 200ms ease, filter 200ms ease;
-  &:hover { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 12px 32px -8px oklch(0.78 0.14 85 / 60%); }
-  &:active { transform: translateY(0); }
+  transition:
+    transform 200ms ease,
+    box-shadow 200ms ease,
+    filter 200ms ease;
+  &:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.08);
+    box-shadow: 0 12px 32px -8px oklch(0.78 0.14 85 / 60%);
+  }
+  &:active {
+    transform: translateY(0);
+  }
 }
 
 @utility btn-ghost-gold {
@@ -192,5 +208,8 @@
   border: 1px solid color-mix(in oklab, var(--gold) 40%, transparent);
   backdrop-filter: blur(10px);
   transition: all 200ms ease;
-  &:hover { border-color: var(--gold); box-shadow: var(--shadow-gold); }
+  &:hover {
+    border-color: var(--gold);
+    box-shadow: var(--shadow-gold);
+  }
 }

@@ -1,16 +1,6 @@
-export type Role =
-  | "Batsman"
-  | "Wicketkeeper"
-  | "AllRounder"
-  | "PaceBowler"
-  | "SpinBowler";
+export type Role = "Batsman" | "Wicketkeeper" | "AllRounder" | "PaceBowler" | "SpinBowler";
 
-export type GameMode =
-  | "ODI_WC"
-  | "T20_WC"
-  | "CHAMPIONS"
-  | "FRANCHISE_T20"
-  | "TEST";
+export type GameMode = "ODI_WC" | "T20_WC" | "CHAMPIONS" | "FRANCHISE_T20" | "TEST";
 
 export type Difficulty = "Easy" | "Medium" | "Hard" | "Legend";
 
@@ -99,7 +89,7 @@ export interface Innings {
   teamName: string;
   runs: number;
   wickets: number;
-  overs: number;          // e.g. 19.4
+  overs: number; // e.g. 19.4
   runRate: number;
   topScorer: { name: string; runs: number; balls: number };
   bestBowler: { name: string; wickets: number; runs: number; overs: number };
@@ -112,12 +102,28 @@ export type MatchFormat = "T20" | "ODI" | "TEST";
 
 /* ---------- Full detailed innings (for scorecard modal + stats) ---------- */
 export interface BatterLine {
-  name: string; runs: number; balls: number; fours: number; sixes: number; out: boolean; how?: string;
+  name: string;
+  runs: number;
+  balls: number;
+  fours: number;
+  sixes: number;
+  out: boolean;
+  how?: string;
 }
 export interface BowlerLine {
-  name: string; overs: number; runs: number; wickets: number; maidens: number; econ: number;
+  name: string;
+  overs: number;
+  runs: number;
+  wickets: number;
+  maidens: number;
+  econ: number;
 }
-export interface FallLine { runs: number; wicket: number; batter: string; over: number; }
+export interface FallLine {
+  runs: number;
+  wicket: number;
+  batter: string;
+  over: number;
+}
 export interface FullInnings {
   teamName: string;
   runs: number;
@@ -141,12 +147,12 @@ export interface LimitedScorecard {
   ourInnings: Innings;
   oppInnings: Innings;
   weWon: boolean;
-  marginText: string;      // e.g. "won by 6 runs"
-  resultLine: string;      // e.g. "India won by 6 runs"
+  marginText: string; // e.g. "won by 6 runs"
+  resultLine: string; // e.g. "India won by 6 runs"
   playerOfMatch: string;
   highlights: string[];
-  eliminated: boolean;     // true if this loss ends the run
-  full?: FullInnings[];    // detailed batter/bowler lines (both teams, both innings)
+  eliminated: boolean; // true if this loss ends the run
+  full?: FullInnings[]; // detailed batter/bowler lines (both teams, both innings)
   /** Present only when the main match finished level and a Super Over decided it. */
   superOver?: SuperOver;
 }
@@ -172,15 +178,15 @@ export interface TestScorecard {
   toss: { winner: "us" | "opp"; decision: "bat" | "bowl" };
   ourName: string;
   oppName: string;
-  ourInnings: Innings[];   // 1 or 2
-  oppInnings: Innings[];   // 1 or 2
+  ourInnings: Innings[]; // 1 or 2
+  oppInnings: Innings[]; // 1 or 2
   result: "WON" | "LOST" | "DRAW";
   marginText: string;
   resultLine: string;
   playerOfMatch: string;
   highlights: string[];
   sessionsNote: string;
-  eliminated: boolean;     // series-level early termination unused for tests
+  eliminated: boolean; // series-level early termination unused for tests
   full?: FullInnings[];
 }
 

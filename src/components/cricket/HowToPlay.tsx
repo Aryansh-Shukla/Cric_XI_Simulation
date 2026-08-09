@@ -1,11 +1,26 @@
 import {
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Users, Shuffle, Crown, Globe2, TrendingUp, Trophy, BarChart3, ClipboardList, Gauge,
+  Users,
+  Shuffle,
+  Crown,
+  Globe2,
+  TrendingUp,
+  Trophy,
+  BarChart3,
+  ClipboardList,
+  Gauge,
 } from "lucide-react";
 
-interface Props { open: boolean; onOpenChange: (open: boolean) => void; }
+interface Props {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
 
 const SECTIONS = [
   {
@@ -64,13 +79,17 @@ export function HowToPlay({ open, onOpenChange }: Props) {
             How To Play <span className="text-gold">Cricket XI</span>
           </DialogTitle>
           <DialogDescription>
-            Draft eleven cricketers from across cricket history, then take them through a tournament.
+            Draft eleven cricketers from across cricket history, then take them through a
+            tournament.
           </DialogDescription>
         </DialogHeader>
 
         <div className="mt-2 space-y-3">
           {SECTIONS.map(({ icon: Icon, title, body }) => (
-            <section key={title} className="rounded-xl border border-[color:var(--border)] bg-[color:var(--muted)]/30 p-4">
+            <section
+              key={title}
+              className="rounded-xl border border-[color:var(--border)] bg-[color:var(--muted)]/30 p-4"
+            >
               <h3 className="flex items-center gap-2 text-sm font-semibold">
                 <Icon className="h-4 w-4 text-gold" />
                 {title}

@@ -1,6 +1,4 @@
-import type {
-  Player, GameMode, MatchResult, LimitedScorecard, StageKind,
-} from "./types";
+import type { Player, GameMode, MatchResult, LimitedScorecard, StageKind } from "./types";
 import { KNOCKOUT_STAGES } from "./types";
 import { CHEMISTRY } from "./data";
 import { DraftPoolService } from "@/services/DraftPoolService";
@@ -10,8 +8,11 @@ import { mulberry32, childRng, type Rng } from "./sim/rng";
 import { simulateLimitedMatch, type Opponent } from "./sim/limited";
 import { simulateTestMatch } from "./sim/test";
 
-function chemistryBonus(players: Player[]): { total: number; activated: { label: string; pair: string }[] } {
-  const names = new Set(players.map(p => p.name));
+function chemistryBonus(players: Player[]): {
+  total: number;
+  activated: { label: string; pair: string }[];
+} {
+  const names = new Set(players.map((p) => p.name));
   const activated: { label: string; pair: string }[] = [];
   let total = 0;
   for (const link of CHEMISTRY) {
@@ -41,9 +42,7 @@ export function generateOpponents(mode: GameMode, rng: Rng, count = 3): Opponent
       squad = pool[Math.floor(rng() * pool.length)];
     }
     used.add(squad.id);
-    const eleven = [...squad.players]
-      .sort((a, b) => overall(b) - overall(a))
-      .slice(0, 11);
+    const eleven = [...squad.players].sort((a, b) => overall(b) - overall(a)).slice(0, 11);
     opps.push({
       name: `${squad.label} XI`,
       rating: teamStrength(eleven),
@@ -57,17 +56,22 @@ export function generateOpponents(mode: GameMode, rng: Rng, count = 3): Opponent
 
 function stagesFor(mode: GameMode): StageKind[] {
   switch (mode) {
-    case "ODI_WC":        return ["League", "League", "League", "Semi Final", "Final"];
-    case "T20_WC":        return ["Group", "Group", "Super 8", "Super 8", "Semi Final", "Final"];
-    case "CHAMPIONS":     return ["Group", "Group", "Semi Final", "Final"];
-    case "FRANCHISE_T20": return ["League", "League", "League", "League", "Qualifier 1", "Qualifier 2", "Final"];
-    case "TEST":          return ["Test 1", "Test 2", "Test 3"];
+    case "ODI_WC":
+      return ["League", "League", "League", "Semi Final", "Final"];
+    case "T20_WC":
+      return ["Group", "Group", "Super 8", "Super 8", "Semi Final", "Final"];
+    case "CHAMPIONS":
+      return ["Group", "Group", "Semi Final", "Final"];
+    case "FRANCHISE_T20":
+      return ["League", "League", "League", "League", "Qualifier 1", "Qualifier 2", "Final"];
+    case "TEST":
+      return ["Test 1", "Test 2", "Test 3"];
   }
 }
 
 export interface Tournament {
   results: MatchResult[];
-  stages: StageKind[];        // planned schedule
+  stages: StageKind[]; // planned schedule
   championshipWon: boolean;
   eliminated: boolean;
   eliminatedAt?: StageKind;
@@ -79,9 +83,9 @@ export interface Tournament {
   seed: number;
   mode: GameMode;
   teamRatingSnapshot: number;
-  finalScore: number;         // leaderboard score
-  seriesResult?: string;      // for TEST
-  playerOfSeries?: string;    // for TEST
+  finalScore: number; // leaderboard score
+  seriesResult?: string; // for TEST
+  playerOfSeries?: string; // for TEST
 }
 
 export function simulateTournament(
@@ -92,14 +96,16 @@ export function simulateTournament(
   ourName = "Your XI",
 ): Tournament {
   const rng = mulberry32(seed);
-  const captain = (captainId && players.find(p => p.id === captainId)) || pickCaptain(players);
+  const captain = (captainId && players.find((p) => p.id === captainId)) || pickCaptain(players);
   const stages = stagesFor(mode);
   const opponents = generateOpponents(mode, rng, stages.length);
   const ratingSnapshot = computeTeamRating(players).overall;
   const chem = chemistryBonus(players).total;
 
   const results: MatchResult[] = [];
-  let wins = 0, losses = 0, draws = 0;
+  let wins = 0,
+    losses = 0,
+    draws = 0;
   let eliminated = false;
   let eliminatedAt: StageKind | undefined;
   let finalStageReached: StageKind = stages[0];
@@ -113,7 +119,9 @@ export function simulateTournament(
     if (mode === "TEST") {
       const t = simulateTestMatch(ourName, players, opp, stage, matchRng, captain);
       results.push(t);
-      if (t.result === "WON") wins++; else if (t.result === "LOST") losses++; else draws++;
+      if (t.result === "WON") wins++;
+      else if (t.result === "LOST") losses++;
+      else draws++;
       continue;
     }
 
@@ -128,7 +136,8 @@ export function simulateTournament(
 
     const m = simulateLimitedMatch(ourName, players, opp, mode, stage, matchRng, chem);
     results.push(m);
-    if (m.weWon) wins++; else losses++;
+    if (m.weWon) wins++;
+    else losses++;
 
     // Elimination logic
     if (!m.weWon) {
@@ -147,8 +156,10 @@ export function simulateTournament(
     const nextStage = stages[i + 1];
     const groupStages: StageKind[] = ["League", "Group", "Super 8"];
     if (groupStages.includes(stage) && (!nextStage || !groupStages.includes(nextStage))) {
-      const groupResults = results.filter(r => "weWon" in r && groupStages.includes(r.stage));
-      const groupWins = groupResults.filter(r => "weWon" in r && (r as LimitedScorecard).weWon).length;
+      const groupResults = results.filter((r) => "weWon" in r && groupStages.includes(r.stage));
+      const groupWins = groupResults.filter(
+        (r) => "weWon" in r && (r as LimitedScorecard).weWon,
+      ).length;
       const needed = Math.ceil(groupResults.length / 2);
       if (groupWins < needed) {
         eliminated = true;
@@ -158,13 +169,15 @@ export function simulateTournament(
     }
   }
 
-  const championshipWon = !eliminated && (() => {
-    const last = results[results.length - 1];
-    if (!last) return false;
-    if ("weWon" in last) return last.weWon && last.stage === "Final";
-    // Test series: majority wins
-    return wins > losses;
-  })();
+  const championshipWon =
+    !eliminated &&
+    (() => {
+      const last = results[results.length - 1];
+      if (!last) return false;
+      if ("weWon" in last) return last.weWon && last.stage === "Final";
+      // Test series: majority wins
+      return wins > losses;
+    })();
 
   // Series/Player-of-series for TEST
   let seriesResult: string | undefined;
@@ -172,21 +185,32 @@ export function simulateTournament(
   if (mode === "TEST") {
     seriesResult = `${ourName} ${wins} — ${losses} ${opponents[0].name.replace(" XI", "")} (${draws} draw${draws === 1 ? "" : "s"})`;
     const potPool = wins >= losses ? players : opponents[0].players;
-    playerOfSeries = [...potPool].sort((a, b) => (b.stats.batting + b.stats.bowling) - (a.stats.batting + a.stats.bowling))[0].name;
+    playerOfSeries = [...potPool].sort(
+      (a, b) => b.stats.batting + b.stats.bowling - (a.stats.batting + a.stats.bowling),
+    )[0].name;
   }
 
   // Leaderboard scoring
   const stageBonus: Record<string, number> = {
-    "Group": 5, "League": 5, "Super 8": 10, "Quarter Final": 15,
-    "Semi Final": 25, "Qualifier 1": 20, "Qualifier 2": 15, "Eliminator": 15,
-    "Final": 40, "Test 1": 15, "Test 2": 15, "Test 3": 15,
+    Group: 5,
+    League: 5,
+    "Super 8": 10,
+    "Quarter Final": 15,
+    "Semi Final": 25,
+    "Qualifier 1": 20,
+    "Qualifier 2": 15,
+    Eliminator: 15,
+    Final: 40,
+    "Test 1": 15,
+    "Test 2": 15,
+    "Test 3": 15,
   };
   const finalScore = Math.round(
-    ratingSnapshot * 3
-    + wins * 12
-    - losses * 4
-    + (championshipWon ? 100 : 0)
-    + (stageBonus[finalStageReached] ?? 0)
+    ratingSnapshot * 3 +
+      wins * 12 -
+      losses * 4 +
+      (championshipWon ? 100 : 0) +
+      (stageBonus[finalStageReached] ?? 0),
   );
 
   return {
@@ -196,7 +220,9 @@ export function simulateTournament(
     eliminated,
     eliminatedAt,
     finalStageReached,
-    wins, losses, draws,
+    wins,
+    losses,
+    draws,
     captain,
     seed,
     mode,

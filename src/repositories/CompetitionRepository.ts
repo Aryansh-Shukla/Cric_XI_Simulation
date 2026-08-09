@@ -10,7 +10,7 @@ export const CompetitionRepository = {
     return COMPETITION_BY_ID.get(id);
   },
   getCompetitionForMode(mode: GameMode): Competition | undefined {
-    return COMPETITIONS.find(c => c.mode === mode);
+    return COMPETITIONS.find((c) => c.mode === mode);
   },
 };
 
@@ -22,6 +22,8 @@ export const EditionRepository = {
     return EDITION_BY_ID.get(id);
   },
   getEditionsForCompetition(competitionId: CompetitionId): Edition[] {
-    return EDITIONS.filter(e => e.competitionId === competitionId).sort((a, b) => a.year - b.year);
+    return EDITIONS.filter((e) => e.competitionId === competitionId).sort(
+      (a, b) => a.year - b.year,
+    );
   },
 };

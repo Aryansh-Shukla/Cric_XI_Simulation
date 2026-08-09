@@ -47,7 +47,10 @@ export function squadToLegacy(squad: HistoricalSquad, mode: GameMode): Squad {
 export function withCanonicalIds(squad: Squad): Squad {
   return {
     ...squad,
-    players: squad.players.map(p => ({ ...p, canonicalId: p.canonicalId ?? canonicalPlayerId(p.name) })),
+    players: squad.players.map((p) => ({
+      ...p,
+      canonicalId: p.canonicalId ?? canonicalPlayerId(p.name),
+    })),
   };
 }
 
@@ -59,6 +62,8 @@ export const HistoricalSquadService = {
   getLegacySquadsForMode(mode: GameMode): Squad[] {
     const competition = CompetitionRepository.getCompetitionForMode(mode);
     if (!competition) return [];
-    return SquadRepository.getSquadsByCompetition(competition.id).map(s => squadToLegacy(s, mode));
+    return SquadRepository.getSquadsByCompetition(competition.id).map((s) =>
+      squadToLegacy(s, mode),
+    );
   },
 };

@@ -5,11 +5,16 @@ import { overall } from "@/lib/cricket/rating";
 
 const roleBadge = (role: Player["role"]) => {
   switch (role) {
-    case "Wicketkeeper": return { label: "WK", icon: Shield };
-    case "PaceBowler":   return { label: "Pace", icon: Zap };
-    case "SpinBowler":   return { label: "Spin", icon: Wind };
-    case "AllRounder":   return { label: "All-rounder", icon: Star };
-    default:              return { label: "Batter", icon: Star };
+    case "Wicketkeeper":
+      return { label: "WK", icon: Shield };
+    case "PaceBowler":
+      return { label: "Pace", icon: Zap };
+    case "SpinBowler":
+      return { label: "Spin", icon: Wind };
+    case "AllRounder":
+      return { label: "All-rounder", icon: Star };
+    default:
+      return { label: "Batter", icon: Star };
   }
 };
 
@@ -30,18 +35,28 @@ export function PlayerCard({
   const Icon = b.icon;
   const showRole = difficulty === "Easy";
   const showCountry = difficulty === "Easy" || difficulty === "Medium";
-  const initials = player.name.split(" ").map(n => n[0]).join("").slice(0, 2);
+  const initials = player.name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2);
   const rating = overall(player);
   const ratingTone =
-    rating >= 90 ? "text-gold border-[color:var(--gold)]/50 bg-[color:var(--gold)]/10"
-    : rating >= 80 ? "text-[color:var(--accent)] border-[color:var(--accent)]/40 bg-[color:var(--accent)]/10"
-    : "text-foreground border-[color:var(--border)] bg-[color:var(--muted)]/60";
+    rating >= 90
+      ? "text-gold border-[color:var(--gold)]/50 bg-[color:var(--gold)]/10"
+      : rating >= 80
+        ? "text-[color:var(--accent)] border-[color:var(--accent)]/40 bg-[color:var(--accent)]/10"
+        : "text-foreground border-[color:var(--border)] bg-[color:var(--muted)]/60";
   const roleShort =
-    player.role === "Batsman" ? "BAT"
-    : player.role === "Wicketkeeper" ? "WK"
-    : player.role === "AllRounder" ? "AR"
-    : player.role === "PaceBowler" ? "PACE"
-    : "SPIN";
+    player.role === "Batsman"
+      ? "BAT"
+      : player.role === "Wicketkeeper"
+        ? "WK"
+        : player.role === "AllRounder"
+          ? "AR"
+          : player.role === "PaceBowler"
+            ? "PACE"
+            : "SPIN";
 
   return (
     <motion.button
@@ -51,7 +66,9 @@ export function PlayerCard({
       whileTap={{ scale: 0.98 }}
       transition={{ type: "spring", stiffness: 260, damping: 22 }}
       className={`glass-card group relative flex w-full flex-col items-start gap-3 rounded-2xl p-4 text-left transition-all ${
-        selected ? "ring-2 ring-[color:var(--gold)] glow-gold" : "hover:ring-1 hover:ring-[color:var(--gold)]/50"
+        selected
+          ? "ring-2 ring-[color:var(--gold)] glow-gold"
+          : "hover:ring-1 hover:ring-[color:var(--gold)]/50"
       }`}
     >
       <div className="flex w-full items-center gap-3">
@@ -71,8 +88,12 @@ export function PlayerCard({
             {squadLabel && <span className="truncate">{squadLabel}</span>}
           </div>
         </div>
-        <div className={`flex shrink-0 flex-col items-center rounded-lg border px-2 py-1 ${ratingTone}`}>
-          <div className="text-[9px] font-semibold uppercase tracking-wider opacity-80">{roleShort}</div>
+        <div
+          className={`flex shrink-0 flex-col items-center rounded-lg border px-2 py-1 ${ratingTone}`}
+        >
+          <div className="text-[9px] font-semibold uppercase tracking-wider opacity-80">
+            {roleShort}
+          </div>
           <div className="text-lg font-black leading-none">{rating}</div>
           <div className="text-[8px] uppercase tracking-widest opacity-60">OVR</div>
         </div>

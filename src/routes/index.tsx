@@ -31,7 +31,7 @@ function Index() {
   // Dev-only catalogue integrity report.
   useEffect(() => {
     if (!import.meta.env.DEV) return;
-    void import("@/lib/cricket/validation").then(m => m.logValidationReport());
+    void import("@/lib/cricket/validation").then((m) => m.logValidationReport());
   }, []);
 
   const reset = () => {
@@ -47,14 +47,24 @@ function Index() {
       {screen === "mode" && (
         <ModeSelect
           onBack={() => setScreen("landing")}
-          onStart={(m, d) => { setMode(m); setDifficulty(d); setPlayers([]); setLeadership(null); setTeamName(""); setScreen("draft"); }}
+          onStart={(m, d) => {
+            setMode(m);
+            setDifficulty(d);
+            setPlayers([]);
+            setLeadership(null);
+            setTeamName("");
+            setScreen("draft");
+          }}
         />
       )}
       {screen === "draft" && (
         <Draft
           mode={mode}
           difficulty={difficulty}
-          onComplete={(p) => { setPlayers(p); setScreen("leadership"); }}
+          onComplete={(p) => {
+            setPlayers(p);
+            setScreen("leadership");
+          }}
         />
       )}
       {screen === "leadership" && (
@@ -63,7 +73,10 @@ function Index() {
           teamName={teamName}
           onTeamNameChange={setTeamName}
           onBack={() => setScreen("draft")}
-          onConfirm={(l) => { setLeadership(l); setScreen("team"); }}
+          onConfirm={(l) => {
+            setLeadership(l);
+            setScreen("team");
+          }}
         />
       )}
       {screen === "team" && (
@@ -76,7 +89,13 @@ function Index() {
         />
       )}
       {screen === "tournament" && (
-        <TournamentView players={players} mode={mode} leadership={leadership} teamName={teamName} onRestart={reset} />
+        <TournamentView
+          players={players}
+          mode={mode}
+          leadership={leadership}
+          teamName={teamName}
+          onRestart={reset}
+        />
       )}
     </div>
   );

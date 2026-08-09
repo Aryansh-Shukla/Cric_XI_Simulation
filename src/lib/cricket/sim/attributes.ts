@@ -103,16 +103,16 @@ export function battingOrder(players: Player[]): Player[] {
 /** Bowlers usable in an innings (specialists + all-rounders, plus fallback part-timers). */
 export function bowlingPool(players: Player[]): Player[] {
   const bowlers = players.filter(
-    p => p.role === "PaceBowler" || p.role === "SpinBowler" || p.role === "AllRounder",
+    (p) => p.role === "PaceBowler" || p.role === "SpinBowler" || p.role === "AllRounder",
   );
   if (bowlers.length >= 5) return bowlers;
   const others = players
-    .filter(p => !bowlers.includes(p))
+    .filter((p) => !bowlers.includes(p))
     .sort((a, b) => b.stats.bowling - a.stats.bowling);
   while (bowlers.length < 5 && others.length) bowlers.push(others.shift()!);
   return bowlers;
 }
 
 export function wicketkeeper(players: Player[]): Player | undefined {
-  return players.find(p => p.role === "Wicketkeeper");
+  return players.find((p) => p.role === "Wicketkeeper");
 }

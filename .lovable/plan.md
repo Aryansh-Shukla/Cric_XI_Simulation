@@ -1,4 +1,3 @@
-
 # Phase 4 — Historical Universe + Living Tournament
 
 This is a large phase. I'll execute it in staged sub-phases behind stable interfaces so nothing currently working breaks. Cloud/Supabase stays OFF.
@@ -8,6 +7,7 @@ This is a large phase. I'll execute it in staged sub-phases behind stable interf
 Introduce a normalized model + repository layer that the existing UI reads through. Existing squads keep working via a migration adapter.
 
 New layout:
+
 ```text
 src/data/
   competitions/    ODI_WC, T20_WC, CHAMPIONS, IPL, ODI, TEST
@@ -25,6 +25,7 @@ src/services/
 ```
 
 Models (mapped onto existing `Player`/`Squad` types via adapters — no breaking rename):
+
 - `Player` canonical: `{ id, name, nationality, battingHand?, bowlingStyle? }`
 - `PlayerEditionProfile`: `{ playerId, competitionId, editionId, teamId, primaryRole, secondaryRoles, batting, bowling, fielding, wicketkeeping?, leadership, pressure, consistency, fitness, overall, canKeepWicket, bowlingRole, traits[] }`
 - `HistoricalSquad`: `{ id, competitionId, editionId, teamId, playerProfileIds[] }`
@@ -44,6 +45,7 @@ Migration order: (1) create models + repos with in-memory store, (2) migrate exi
 ## Sub-phase 4C — Reroll rewiring
 
 `SquadRepository`:
+
 - `getAlternateEditionsForTeam(competitionId, teamId, excludeEditionId[], franchiseLineageId?)` → for "Same Team → Different Year", franchise renames traversed via `franchiseLineageId` (e.g. `kings-xi-punjab` and `punjab-kings` share `punjab-ipl`).
 - `getOtherTeamsInEdition(competitionId, editionId, excludeTeamId[])` → "Same Year → Different Team", scoped to actual participants of that edition.
 - Both return `[]` when nothing eligible; Draft disables the button and shows "No other eligible season available." — no crashes.
@@ -79,6 +81,7 @@ Idempotency: `advanceTournament` operates on fixture IDs; re-invocation with the
 ## Sub-phase 4F — Historical catalogue population (batched)
 
 Populate under `src/data/` incrementally. Each batch: add files, run validator, commit.
+
 - Batch 1: ODI World Cup editions 1975–2023.
 - Batch 2: T20 World Cup editions 2007–2024.
 - Batch 3: Champions Trophy editions 2002–2025.
@@ -91,6 +94,7 @@ Realistic scope note: I will not fabricate 300+ complete verified rosters in one
 ## Sub-phase 4G — Validation + reporting
 
 `src/lib/cricket/validation.ts`:
+
 - Unique squad IDs, resolvable player/team/competition/edition refs, no duplicate player within a squad, ratings in range, role-Overall formula match, IPL nationality present, WK/bowling metadata present.
 - Dev-only console report on load: player/squad/edition counts, broken refs, coverage matrix per competition × edition.
 - Sanity checks on tournament state: `W+L+T+NR = P`, scheduled == completed at stage boundaries, no MatchResult double-counted.
