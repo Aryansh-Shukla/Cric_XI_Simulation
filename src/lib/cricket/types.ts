@@ -38,6 +38,8 @@ export interface Player {
   isCaptain?: boolean;
   isOverseas?: boolean; // for franchise mode
   traits: Trait[];
+  /** V2 stable trait ids (see lib/cricket/traits.ts). Legacy traits map on when absent. */
+  traitIds?: import("./traits").TraitId[];
   stats: PlayerStats;
 }
 
