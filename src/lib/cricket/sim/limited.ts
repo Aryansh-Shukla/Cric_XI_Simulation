@@ -181,6 +181,36 @@ interface OutcomeCtx {
   wicketsDown: number;
   fielding: number; // 0..100 avg
   chemistryBonus: number;
+  /** Team modifier applied to the batting side (rating points). */
+  batMod: number;
+  /** Team modifier applied to the fielding side (rating points). */
+  bowlMod: number;
+  /** Fielding reliability swing for the fielding side. */
+  fieldMod: number;
+  /** Captaincy quality of the fielding side; only bites under pressure. */
+  captaincy: number;
+  knockout: boolean;
+  /** Baseline occasion pressure, 0..1. */
+  basePressure: number;
+}
+
+/**
+ * Contextual pressure for this delivery: the occasion plus the state of the
+ * game. Deliberately situational — it is never a flat penalty on everyone.
+ */
+function situationalPressure(ctx: OutcomeCtx, phase: Phase, parRpo: number): number {
+  let p = ctx.basePressure;
+  if (ctx.target !== undefined && ctx.ballsLeft > 0) {
+    const needed = Math.max(0, ctx.target - ctx.currentRuns);
+    const reqRpo = (needed / ctx.ballsLeft) * 6;
+    if (reqRpo > parRpo * 1.15) p += 0.18;
+    if (needed <= 25 && ctx.ballsLeft <= 24) p += 0.22; // tight finish
+    if (phase === "DEATH") p += 0.12;
+  } else if (phase === "DEATH") {
+    p += 0.08;
+  }
+  if (ctx.wicketsDown >= 7) p += 0.08;
+  return clamp(p, 0, 1);
 }
 
 function ballOutcome(
@@ -192,8 +222,20 @@ function ballOutcome(
   const ph = phaseFor(ctx.format, ctx.over);
   const bA = attrs(bat.p);
   const wA = attrs(bwl.p);
-  const bSkill = skillFor(bA, ph.phase, "bat");
-  const wSkill = skillFor(wA, ph.phase, "bowl");
+
+  const situation: TraitSituation = {
+    phase: ph.phase,
+    chasing: ctx.target !== undefined,
+    knockout: ctx.knockout,
+    pressure: situationalPressure(ctx, ph.phase, ph.rpo),
+  };
+  // Captaincy sharpens the fielding side most when the game is tight.
+  const captainEdge = ctx.captaincy * (0.4 + situation.pressure);
+
+  const bSkill =
+    skillFor(bA, ph.phase, "bat") + battingTraitDelta(bat.p, situation) + ctx.batMod;
+  const wSkill =
+    skillFor(wA, ph.phase, "bowl") + bowlingTraitDelta(bwl.p, situation) + ctx.bowlMod + captainEdge;
   const skillFactor = 1 + (bSkill - wSkill + ctx.chemistryBonus * 0.4) / 220;
 
   const pf = pitchFactors(ctx.pitch);
@@ -214,12 +256,14 @@ function ballOutcome(
   const rpo = ph.rpo * skillFactor * pf.bat * wf.bat * ctx.era * chaseFactor * wicketBrake;
   const meanRpb = clamp(rpo / 6, 0.35, 3.2);
 
+  const effFielding = clamp(ctx.fielding + ctx.fieldMod + captainEdge, 30, 100);
   let pWkt =
     (ph.wkt / Math.max(0.75, skillFactor)) *
     pf.wkt *
     wf.wkt *
     (chaseFactor > 1.3 ? 1.35 : 1) *
-    (0.9 + (100 - ctx.fielding) / 500);
+    (0.9 + (100 - effFielding) / 500) *
+    wicketTraitMultiplier(bwl.p, situation);
   pWkt = clamp(pWkt, 0.005, 0.28);
 
   if (rng() < pWkt) {
