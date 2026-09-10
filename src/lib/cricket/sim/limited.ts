@@ -12,6 +12,45 @@ import type {
 import { KNOCKOUT_STAGES } from "../types";
 import { attrs, battingOrder, bowlingPool, wicketkeeper } from "./attributes";
 import { clamp, pick, Rng, weightedPick } from "./rng";
+import {
+  battingTraitDelta,
+  bowlingTraitDelta,
+  wicketTraitMultiplier,
+  type TraitSituation,
+} from "../traits";
+
+/* ---------- Team-level contextual inputs ---------- */
+
+/**
+ * Small, bounded contextual inputs for one side in one match. Everything here
+ * is in rating points and stays far below the weight of base player ratings.
+ */
+export interface SideContext {
+  /** Chemistry + balance + momentum swing applied to batting skill. */
+  batting: number;
+  /** Same, applied to bowling skill. */
+  bowling: number;
+  /** Fielding reliability swing (0-100 scale). */
+  fielding: number;
+  /** Captaincy quality above par — only bites in pressure situations. */
+  captaincy: number;
+}
+
+export const NEUTRAL_SIDE: SideContext = { batting: 0, bowling: 0, fielding: 0, captaincy: 0 };
+
+/** Match-level context supplied by the tournament layer. */
+export interface MatchContext {
+  knockout: boolean;
+  /** Baseline occasion pressure, 0..1. */
+  pressure: number;
+  ours: SideContext;
+}
+
+export const NEUTRAL_MATCH_CONTEXT: MatchContext = {
+  knockout: false,
+  pressure: 0,
+  ours: NEUTRAL_SIDE,
+};
 
 /* ---------- Types ---------- */
 
