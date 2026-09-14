@@ -914,6 +914,7 @@ export function simulateLimitedMatch(
   stage: StageKind,
   rng: Rng,
   chemistryBonus: number,
+  mctx: MatchContext = NEUTRAL_MATCH_CONTEXT,
 ): LimitedScorecard {
   const format: Format = mode === "T20_WC" || mode === "FRANCHISE_T20" ? "T20" : "ODI";
   const pitch = pick(PITCHES, rng);
