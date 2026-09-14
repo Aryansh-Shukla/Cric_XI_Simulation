@@ -3,6 +3,7 @@ import { Crown, Shield, AlertTriangle, CheckCircle2, Sparkles, ArrowRight } from
 import type { GameMode, Player } from "@/lib/cricket/types";
 import { validateTeam, pickCaptain, pickViceCaptain } from "@/lib/cricket/rules";
 import { activatedChemistry } from "@/lib/cricket/simulation";
+import { computeChemistry } from "@/lib/cricket/chemistry";
 
 interface Props {
   players: Player[];
@@ -37,6 +38,11 @@ export function TeamView({ players, mode, leadership, onSimulate, onRestart }: P
     (leadership && players.find((p) => p.id === leadership.keeperId)) ||
     players.find((p) => p.role === "Wicketkeeper");
   const chem = activatedChemistry(players);
+  const chemistry = computeChemistry(players, mode, {
+    captainId: captain.id,
+    viceCaptainId: vice.id,
+    keeperId: keeper?.id,
+  });
 
   return (
     <div className="min-h-screen px-6 py-10">
