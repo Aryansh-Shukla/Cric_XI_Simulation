@@ -232,10 +232,12 @@ function ballOutcome(
   // Captaincy sharpens the fielding side most when the game is tight.
   const captainEdge = ctx.captaincy * (0.4 + situation.pressure);
 
-  const bSkill =
-    skillFor(bA, ph.phase, "bat") + battingTraitDelta(bat.p, situation) + ctx.batMod;
+  const bSkill = skillFor(bA, ph.phase, "bat") + battingTraitDelta(bat.p, situation) + ctx.batMod;
   const wSkill =
-    skillFor(wA, ph.phase, "bowl") + bowlingTraitDelta(bwl.p, situation) + ctx.bowlMod + captainEdge;
+    skillFor(wA, ph.phase, "bowl") +
+    bowlingTraitDelta(bwl.p, situation) +
+    ctx.bowlMod +
+    captainEdge;
   const skillFactor = 1 + (bSkill - wSkill + ctx.chemistryBonus * 0.4) / 220;
 
   const pf = pitchFactors(ctx.pitch);

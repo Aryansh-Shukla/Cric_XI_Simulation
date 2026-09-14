@@ -188,11 +188,7 @@ export function createTournament(
   }));
   const ratingSnapshot = computeTeamRating(players).overall;
   const chem = chemistryBonus(players);
-  const chemistry = computeChemistry(
-    players,
-    mode,
-    leadership ?? { captainId: captain.id },
-  );
+  const chemistry = computeChemistry(players, mode, leadership ?? { captainId: captain.id });
   const modifiers = modifiersFrom(chemistry, 0);
 
   return {
@@ -442,7 +438,7 @@ export function advanceTournament(prev: TournamentState): TournamentState {
   for (const k of Object.keys(state.phaseStandings))
     state.phaseStandings[k] = { ...state.phaseStandings[k] };
 
-  let i = state.currentIndex;
+  const i = state.currentIndex;
   if (i >= state.fixtures.length) {
     state.complete = true;
     state.currentIndex = i;
