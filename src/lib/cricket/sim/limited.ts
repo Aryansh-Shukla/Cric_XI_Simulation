@@ -432,6 +432,12 @@ export function simulateInnings(
           wicketsDown: wickets,
           fielding,
           chemistryBonus: ctx.chemistryBonus,
+          batMod: ctx.batMod ?? 0,
+          bowlMod: ctx.bowlMod ?? 0,
+          fieldMod: ctx.fieldMod ?? 0,
+          captaincy: ctx.captaincy ?? 0,
+          knockout: ctx.knockout ?? false,
+          basePressure: ctx.basePressure ?? 0,
         },
         rng,
       );
