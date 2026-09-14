@@ -936,18 +936,35 @@ export function simulateLimitedMatch(
         : 2015;
   const era = eraMultiplier(yearHint, mode);
 
-  const ctx: SimContext = { format, pitch, weather, era, chemistryBonus };
+  const base = {
+    format,
+    pitch,
+    weather,
+    era,
+    chemistryBonus,
+    knockout: mctx.knockout,
+    basePressure: mctx.pressure,
+  };
+  // Our batting innings: our team modifiers help the batters.
+  const ourBatCtx: SimContext = { ...base, batMod: mctx.ours.batting };
+  // Our bowling innings: our modifiers help the attack and the field.
+  const ourBowlCtx: SimContext = {
+    ...base,
+    bowlMod: mctx.ours.bowling,
+    fieldMod: mctx.ours.fielding,
+    captaincy: mctx.ours.captaincy,
+  };
 
   let ourState: InningsState;
   let oppState: InningsState;
   if (weBattedFirst) {
-    ourState = simulateInnings(ourName, ourPlayers, opp.players, ctx, rng);
+    ourState = simulateInnings(ourName, ourPlayers, opp.players, ourBatCtx, rng);
     const target = ourState.runs + 1;
-    oppState = simulateInnings(opp.name, opp.players, ourPlayers, ctx, rng, target);
+    oppState = simulateInnings(opp.name, opp.players, ourPlayers, ourBowlCtx, rng, target);
   } else {
-    oppState = simulateInnings(opp.name, opp.players, ourPlayers, ctx, rng);
+    oppState = simulateInnings(opp.name, opp.players, ourPlayers, ourBowlCtx, rng);
     const target = oppState.runs + 1;
-    ourState = simulateInnings(ourName, ourPlayers, opp.players, ctx, rng, target);
+    ourState = simulateInnings(ourName, ourPlayers, opp.players, ourBatCtx, rng, target);
   }
 
   const ourInn = summariseInnings(ourState);
