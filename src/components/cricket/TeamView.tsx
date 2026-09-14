@@ -165,8 +165,38 @@ export function TeamView({ players, mode, leadership, onSimulate, onRestart }: P
 
             <div className="glass-card rounded-2xl p-5">
               <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground">
-                <Sparkles className="h-3.5 w-3.5 text-[color:var(--accent)]" /> Chemistry
+                <Sparkles className="h-3.5 w-3.5 text-[color:var(--accent)]" /> Chemistry &amp;
+                Balance
               </div>
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <Stat label="Chemistry" value={chemistry.score} />
+                <Stat label="Balance" value={chemistry.balance.score} />
+              </div>
+              <p className="mt-3 text-sm text-muted-foreground">{chemistry.summary}</p>
+              {chemistry.balance.strengths.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {chemistry.balance.strengths.map((s) => (
+                    <span
+                      key={s}
+                      className="rounded-full border border-[color:var(--accent)]/30 bg-[color:var(--accent)]/10 px-2.5 py-1 text-[11px]"
+                    >
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {chemistry.balance.weaknesses.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {chemistry.balance.weaknesses.map((w) => (
+                    <span
+                      key={w}
+                      className="rounded-full border border-[color:var(--destructive)]/30 bg-[color:var(--destructive)]/10 px-2.5 py-1 text-[11px]"
+                    >
+                      {w}
+                    </span>
+                  ))}
+                </div>
+              )}
               {chem.length === 0 ? (
                 <div className="mt-3 text-sm text-muted-foreground">
                   No legendary combinations activated.
