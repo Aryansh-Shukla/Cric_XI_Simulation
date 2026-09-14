@@ -219,6 +219,8 @@ interface TestInningsOpts {
   declareThreshold?: number; // declare when lead >= threshold and enough time left
   currentLeadBase?: number; // score already ahead (for declare calc)
   captainLeadership?: number;
+  /** Contextual team modifiers for this innings. */
+  mods?: TestMods;
 }
 
 function simTestInnings(
@@ -302,6 +304,7 @@ function simTestInnings(
         chasePressure,
         wickets,
         rng,
+        opts.mods ?? NEUTRAL_MODS,
       );
       balls++;
       batState.balls++;
