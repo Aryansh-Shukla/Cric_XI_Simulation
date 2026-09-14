@@ -420,6 +420,7 @@ export function simulateTestMatch(
   stage: StageKind,
   rng: Rng,
   captain: Player,
+  mctx: MatchContext = NEUTRAL_MATCH_CONTEXT,
 ): TestScorecard {
   const pitch = pick(PITCHES, rng);
   const weather = pick(WEATHERS, rng);
@@ -435,6 +436,15 @@ export function simulateTestMatch(
   const weBattedFirst =
     (tossWinner === "us" && tossDecision === "bat") ||
     (tossWinner === "opp" && tossDecision === "bowl");
+
+  /** Our contextual modifiers apply to whichever side we are in this innings. */
+  const modsFor = (battingTag: "us" | "opp"): TestMods => ({
+    batMod: battingTag === "us" ? mctx.ours.batting : 0,
+    bowlMod: battingTag === "us" ? 0 : mctx.ours.bowling,
+    captaincy: battingTag === "us" ? 0 : mctx.ours.captaincy,
+    knockout: mctx.knockout,
+    basePressure: mctx.pressure,
+  });
 
   let ballsUsed = 0;
   const dayOf = () => 1 + Math.floor(ballsUsed / (TOTAL_BALLS_BUDGET / 5));
