@@ -352,6 +352,16 @@ export interface SimContext {
   weather: Weather;
   era: number;
   chemistryBonus: number;
+  /** Batting-side team modifier (rating points). Optional; defaults to none. */
+  batMod?: number;
+  /** Fielding-side team modifier (rating points). */
+  bowlMod?: number;
+  /** Fielding-side fielding swing. */
+  fieldMod?: number;
+  /** Fielding-side captaincy edge. */
+  captaincy?: number;
+  knockout?: boolean;
+  basePressure?: number;
 }
 
 export function simulateInnings(
