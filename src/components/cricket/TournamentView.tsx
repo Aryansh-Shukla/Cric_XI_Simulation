@@ -116,7 +116,7 @@ type Tab = "matches" | "leaders" | "standings";
 function TournamentInner({ players, mode, leadership, teamName, onRestart }: Props) {
   const ourName = teamName?.trim() || undefined;
   const [state, setState] = useState<TournamentState>(() =>
-    createTournament(players, mode, undefined, leadership?.captainId, ourName),
+    createTournament(players, mode, undefined, leadership?.captainId, ourName, leadership),
   );
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<Tab>("matches");
@@ -249,6 +249,22 @@ function Header({
             {state.wins}W – {state.losses}L{state.draws ? ` – ${state.draws}D` : ""}
           </span>
         </p>
+        <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
+          <span className="rounded-full border border-[color:var(--border)] bg-[color:var(--muted)]/40 px-3 py-1">
+            Momentum <span className="text-gold">{momentumLabel(state.momentum)}</span>
+          </span>
+          <span className="rounded-full border border-[color:var(--border)] bg-[color:var(--muted)]/40 px-3 py-1">
+            Pressure{" "}
+            <span className="text-[color:var(--accent)]">{pressureLabel(state.pressure)}</span>
+          </span>
+          <span className="rounded-full border border-[color:var(--border)] bg-[color:var(--muted)]/40 px-3 py-1">
+            Chemistry <span className="text-gold">{state.chemistry.score}</span>
+          </span>
+          <span className="rounded-full border border-[color:var(--border)] bg-[color:var(--muted)]/40 px-3 py-1">
+            Balance{" "}
+            <span className="text-[color:var(--accent)]">{state.chemistry.balance.label}</span>
+          </span>
+        </div>
       </div>
       <button
         onClick={onRestart}
