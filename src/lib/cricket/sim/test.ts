@@ -474,6 +474,7 @@ export function simulateTestMatch(
       ballsBudget: TOTAL_BALLS_BUDGET - ballsUsed,
       declareThreshold: 500,
       captainLeadership: captain.stats.leadership,
+      mods: modsFor(firstBat.tag),
     },
   );
   push(firstBat.tag, inn1);
@@ -492,6 +493,7 @@ export function simulateTestMatch(
       ballsBudget: TOTAL_BALLS_BUDGET - ballsUsed,
       declareThreshold: 500,
       captainLeadership: captain.stats.leadership,
+      mods: modsFor(secondBat.tag),
     },
   );
   push(secondBat.tag, inn2);
@@ -515,7 +517,7 @@ export function simulateTestMatch(
       weather,
       dayOf,
       rng,
-      { ballsBudget: TOTAL_BALLS_BUDGET - ballsUsed, captainLeadership: captain.stats.leadership },
+      { ballsBudget: TOTAL_BALLS_BUDGET - ballsUsed, captainLeadership: captain.stats.leadership, mods: modsFor(secondBat.tag) },
     );
     inn3.followedOn = true;
     push(secondBat.tag, inn3);
@@ -539,6 +541,7 @@ export function simulateTestMatch(
           ballsBudget: TOTAL_BALLS_BUDGET - ballsUsed,
           target: chaseTarget,
           captainLeadership: captain.stats.leadership,
+      mods: modsFor(firstBat.tag),
         },
       );
       push(firstBat.tag, inn4);
@@ -560,6 +563,7 @@ export function simulateTestMatch(
           declareThreshold: Math.max(180, 260 - lead),
           currentLeadBase: lead,
           captainLeadership: captain.stats.leadership,
+      mods: modsFor(firstBat.tag),
         },
       );
       push(firstBat.tag, inn3);
@@ -579,6 +583,7 @@ export function simulateTestMatch(
             ballsBudget: TOTAL_BALLS_BUDGET - ballsUsed,
             target: chaseTarget,
             captainLeadership: captain.stats.leadership,
+      mods: modsFor(secondBat.tag),
           },
         );
         push(secondBat.tag, inn4);
