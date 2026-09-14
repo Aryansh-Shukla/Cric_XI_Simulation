@@ -15,8 +15,17 @@ import { DraftPoolService } from "@/services/DraftPoolService";
 import { pickCaptain } from "./rules";
 import { computeTeamRating, overall } from "./rating";
 import { mulberry32, childRng, type Rng } from "./sim/rng";
-import { simulateLimitedMatch, type Opponent } from "./sim/limited";
+import { simulateLimitedMatch, type Opponent, type MatchContext } from "./sim/limited";
 import { simulateTestMatch } from "./sim/test";
+import {
+  computeChemistry,
+  modifiersFrom,
+  totalModifier,
+  type TeamChemistry,
+  type TeamLeadership,
+  type TeamModifiers,
+} from "./chemistry";
+import { fixturePressure, nextMomentum } from "./momentum";
 
 function stagesFor(mode: GameMode): StageKind[] {
   switch (mode) {
@@ -132,6 +141,14 @@ export interface TournamentState {
   complete: boolean;
   teamRatingSnapshot: number;
   chemistryBonus: number;
+  /** XI chemistry, balance and leadership assessment (fixed for the campaign). */
+  chemistry: TeamChemistry;
+  /** Contextual rating swings derived from chemistry, balance, captaincy, momentum. */
+  modifiers: TeamModifiers;
+  /** Deterministic form swing, -1..1, updated after every completed user match. */
+  momentum: number;
+  /** Occasion pressure for the next fixture, 0..1. */
+  pressure: number;
   finalStageReached: StageKind;
   seriesResult?: string;
   playerOfSeries?: string;
@@ -154,6 +171,7 @@ export function createTournament(
   seed = Date.now(),
   captainId?: string,
   ourName = "Your XI",
+  leadership?: TeamLeadership | null,
 ): TournamentState {
   const rng = mulberry32(seed);
   const captain = (captainId && players.find((p) => p.id === captainId)) || pickCaptain(players);
@@ -170,6 +188,12 @@ export function createTournament(
   }));
   const ratingSnapshot = computeTeamRating(players).overall;
   const chem = chemistryBonus(players);
+  const chemistry = computeChemistry(
+    players,
+    mode,
+    leadership ?? { captainId: captain.id },
+  );
+  const modifiers = modifiersFrom(chemistry, 0);
 
   return {
     mode,
@@ -190,6 +214,10 @@ export function createTournament(
     complete: false,
     teamRatingSnapshot: ratingSnapshot,
     chemistryBonus: chem,
+    chemistry,
+    modifiers,
+    momentum: 0,
+    pressure: fixturePressure({ stage: stages[0], mustWin: false, momentum: 0 }),
     finalStageReached: stages[0],
     finalScore: 0,
     playerStats: {},
@@ -431,6 +459,29 @@ export function advanceTournament(prev: TournamentState): TournamentState {
   }
   const matchRng = childRng(mulberry32(state.seed + i * 7919 + 13));
 
+  // Contextual inputs for this fixture: chemistry, balance, captaincy, momentum
+  // and the pressure of the occasion. All small next to raw player quality.
+  const knockout = (KNOCKOUT_STAGES as string[]).includes(fixture.stage);
+  const pressure = fixturePressure({
+    stage: fixture.stage,
+    mustWin: knockout,
+    momentum: state.momentum,
+  });
+  state.pressure = pressure;
+  const mods = modifiersFrom(state.chemistry, state.momentum);
+  state.modifiers = mods;
+  const swing = totalModifier(mods);
+  const mctx: MatchContext = {
+    knockout,
+    pressure,
+    ours: {
+      batting: swing,
+      bowling: swing,
+      fielding: (state.chemistry.balance.score - 68) / 8,
+      captaincy: mods.captaincy,
+    },
+  };
+
   // User match
   let r: MatchResult;
   if (state.mode === "TEST") {
@@ -441,6 +492,7 @@ export function advanceTournament(prev: TournamentState): TournamentState {
       fixture.stage,
       matchRng,
       state.captain,
+      mctx,
     );
     if ((r as TestScorecard).result === "WON") state.wins++;
     else if ((r as TestScorecard).result === "LOST") state.losses++;
@@ -454,11 +506,13 @@ export function advanceTournament(prev: TournamentState): TournamentState {
       fixture.stage,
       matchRng,
       state.chemistryBonus,
+      mctx,
     );
     if ((r as LimitedScorecard).weWon) state.wins++;
     else state.losses++;
   }
   state.results.push(r);
+  state.momentum = nextMomentum(state.momentum, r);
   accumulate(state.playerStats, r, true);
   // Only league/group fixtures feed the points table — knockouts are not league games.
   if (state.mode !== "TEST" && GROUP_STAGES.includes(fixture.stage)) {
