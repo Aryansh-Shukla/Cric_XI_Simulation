@@ -9,6 +9,14 @@ import type {
 } from "../types";
 import { attrs, battingOrder, bowlingPool } from "./attributes";
 import { clamp, pick, Rng, weightedPick } from "./rng";
+import {
+  battingTraitDelta,
+  bowlingTraitDelta,
+  wicketTraitMultiplier,
+  type TraitSituation,
+} from "../traits";
+import type { MatchContext } from "./limited";
+import { NEUTRAL_MATCH_CONTEXT } from "./limited";
 
 /**
  * Test match engine — separate from limited overs.
@@ -98,6 +106,25 @@ function pickBowler(
   return weightedPick(pool, weights, rng);
 }
 
+interface TestMods {
+  /** Team modifier for the batting side (rating points). */
+  batMod: number;
+  /** Team modifier for the fielding side (rating points). */
+  bowlMod: number;
+  /** Captaincy edge for the fielding side. */
+  captaincy: number;
+  knockout: boolean;
+  basePressure: number;
+}
+
+const NEUTRAL_MODS: TestMods = {
+  batMod: 0,
+  bowlMod: 0,
+  captaincy: 0,
+  knockout: false,
+  basePressure: 0,
+};
+
 function ballOutcome(
   bat: BatterState,
   bwl: BowlerState,
@@ -107,10 +134,23 @@ function ballOutcome(
   chasePressure: number,
   wicketsDown: number,
   rng: Rng,
+  mods: TestMods = NEUTRAL_MODS,
 ): { runs: number; wicket: boolean; dismissal?: string } {
   const bA = attrs(bat.p);
   const wA = attrs(bwl.p);
-  const skill = 1 + (bA.midBat - wA.midBowl) / 240;
+
+  // Test cricket is a long middle phase; pressure builds from the chase,
+  // the occasion and wickets falling.
+  const situation: TraitSituation = {
+    phase: "MID",
+    chasing: chasePressure > 0,
+    knockout: mods.knockout,
+    pressure: clamp(mods.basePressure + chasePressure * 0.5 + (wicketsDown >= 7 ? 0.12 : 0), 0, 1),
+  };
+  const captainEdge = mods.captaincy * (0.4 + situation.pressure);
+  const batSkill = bA.midBat + battingTraitDelta(bat.p, situation) + mods.batMod;
+  const bowlSkill = wA.midBowl + bowlingTraitDelta(bwl.p, situation) + mods.bowlMod + captainEdge;
+  const skill = 1 + (batSkill - bowlSkill) / 240;
   const pf = pitchFactors(pitch, matchDay);
   const wf = weatherFactors(weather);
 
@@ -126,7 +166,8 @@ function ballOutcome(
     pf.wkt *
     wf.wkt *
     (chasePressure > 0.6 ? 1.25 : 1) *
-    (wicketsDown >= 7 ? 1.15 : 1);
+    (wicketsDown >= 7 ? 1.15 : 1) *
+    wicketTraitMultiplier(bwl.p, situation);
   pWkt = clamp(pWkt, 0.005, 0.1);
 
   if (rng() < pWkt) {
@@ -174,6 +215,8 @@ interface TestInningsOpts {
   declareThreshold?: number; // declare when lead >= threshold and enough time left
   currentLeadBase?: number; // score already ahead (for declare calc)
   captainLeadership?: number;
+  /** Contextual team modifiers for this innings. */
+  mods?: TestMods;
 }
 
 function simTestInnings(
@@ -257,6 +300,7 @@ function simTestInnings(
         chasePressure,
         wickets,
         rng,
+        opts.mods ?? NEUTRAL_MODS,
       );
       balls++;
       batState.balls++;
@@ -372,6 +416,7 @@ export function simulateTestMatch(
   stage: StageKind,
   rng: Rng,
   captain: Player,
+  mctx: MatchContext = NEUTRAL_MATCH_CONTEXT,
 ): TestScorecard {
   const pitch = pick(PITCHES, rng);
   const weather = pick(WEATHERS, rng);
@@ -387,6 +432,15 @@ export function simulateTestMatch(
   const weBattedFirst =
     (tossWinner === "us" && tossDecision === "bat") ||
     (tossWinner === "opp" && tossDecision === "bowl");
+
+  /** Our contextual modifiers apply to whichever side we are in this innings. */
+  const modsFor = (battingTag: "us" | "opp"): TestMods => ({
+    batMod: battingTag === "us" ? mctx.ours.batting : 0,
+    bowlMod: battingTag === "us" ? 0 : mctx.ours.bowling,
+    captaincy: battingTag === "us" ? 0 : mctx.ours.captaincy,
+    knockout: mctx.knockout,
+    basePressure: mctx.pressure,
+  });
 
   let ballsUsed = 0;
   const dayOf = () => 1 + Math.floor(ballsUsed / (TOTAL_BALLS_BUDGET / 5));
@@ -416,6 +470,7 @@ export function simulateTestMatch(
       ballsBudget: TOTAL_BALLS_BUDGET - ballsUsed,
       declareThreshold: 500,
       captainLeadership: captain.stats.leadership,
+      mods: modsFor(firstBat.tag),
     },
   );
   push(firstBat.tag, inn1);
@@ -434,6 +489,7 @@ export function simulateTestMatch(
       ballsBudget: TOTAL_BALLS_BUDGET - ballsUsed,
       declareThreshold: 500,
       captainLeadership: captain.stats.leadership,
+      mods: modsFor(secondBat.tag),
     },
   );
   push(secondBat.tag, inn2);
@@ -457,7 +513,11 @@ export function simulateTestMatch(
       weather,
       dayOf,
       rng,
-      { ballsBudget: TOTAL_BALLS_BUDGET - ballsUsed, captainLeadership: captain.stats.leadership },
+      {
+        ballsBudget: TOTAL_BALLS_BUDGET - ballsUsed,
+        captainLeadership: captain.stats.leadership,
+        mods: modsFor(secondBat.tag),
+      },
     );
     inn3.followedOn = true;
     push(secondBat.tag, inn3);
@@ -481,6 +541,7 @@ export function simulateTestMatch(
           ballsBudget: TOTAL_BALLS_BUDGET - ballsUsed,
           target: chaseTarget,
           captainLeadership: captain.stats.leadership,
+          mods: modsFor(firstBat.tag),
         },
       );
       push(firstBat.tag, inn4);
@@ -502,6 +563,7 @@ export function simulateTestMatch(
           declareThreshold: Math.max(180, 260 - lead),
           currentLeadBase: lead,
           captainLeadership: captain.stats.leadership,
+          mods: modsFor(firstBat.tag),
         },
       );
       push(firstBat.tag, inn3);
@@ -521,6 +583,7 @@ export function simulateTestMatch(
             ballsBudget: TOTAL_BALLS_BUDGET - ballsUsed,
             target: chaseTarget,
             captainLeadership: captain.stats.leadership,
+            mods: modsFor(secondBat.tag),
           },
         );
         push(secondBat.tag, inn4);

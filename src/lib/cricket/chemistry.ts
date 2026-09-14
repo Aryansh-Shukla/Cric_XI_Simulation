@@ -212,12 +212,16 @@ export function computeChemistry(
 
 function buildSummary(balance: TeamBalance, linkCount: number, leadership: number): string {
   const parts: string[] = [];
-  if (balance.strengths.length) parts.push(balance.strengths.slice(0, 2).join(" and ").toLowerCase());
+  if (balance.strengths.length)
+    parts.push(balance.strengths.slice(0, 2).join(" and ").toLowerCase());
   if (leadership >= 80) parts.push("outstanding leadership");
   else if (leadership < 55) parts.push("leadership is a question mark");
-  if (linkCount) parts.push(`${linkCount} famous partnership${linkCount === 1 ? "" : "s"} in the XI`);
+  if (linkCount)
+    parts.push(`${linkCount} famous partnership${linkCount === 1 ? "" : "s"} in the XI`);
   const head = parts.length ? `Strong on ${parts.join(", ")}.` : "A workable, unspectacular XI.";
-  const tail = balance.weaknesses.length ? ` Watch out: ${balance.weaknesses[0].toLowerCase()}.` : "";
+  const tail = balance.weaknesses.length
+    ? ` Watch out: ${balance.weaknesses[0].toLowerCase()}.`
+    : "";
   return head + tail;
 }
 
