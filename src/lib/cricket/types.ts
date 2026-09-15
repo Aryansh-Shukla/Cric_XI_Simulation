@@ -137,6 +137,45 @@ export interface FullInnings {
   label?: string; // e.g. "1st Innings", "2nd Innings"
 }
 
+/* ---------- Ball-by-ball timeline (progressive reveal of the canonical result) ---------- */
+export type BallPhase = "PP" | "MID" | "ACCEL" | "DEATH";
+
+export interface BallEvent {
+  /** 0-indexed over, 1..6 ball within the over. */
+  over: number;
+  ball: number;
+  batter: string;
+  bowler: string;
+  runs: number;
+  wicket: boolean;
+  dismissal?: string;
+  /** Innings score AFTER this delivery. */
+  score: number;
+  wickets: number;
+  batterRuns: number;
+  batterBalls: number;
+  bowlerWickets: number;
+  bowlerRuns: number;
+  bowlerBalls: number;
+  partnershipRuns: number;
+  partnershipBalls: number;
+  /** Which wicket this partnership is for (1 = opening stand). */
+  partnershipWicket: number;
+  phase: BallPhase;
+}
+
+export interface TimelineInnings {
+  teamName: string;
+  label: string;
+  format: "T20" | "ODI";
+  maxOvers: number;
+  /** Runs needed to win when this innings is a chase. */
+  target?: number;
+  runs: number;
+  wickets: number;
+  balls: BallEvent[];
+}
+
 export interface LimitedScorecard {
   format: "T20" | "ODI";
   stage: StageKind;
@@ -157,6 +196,8 @@ export interface LimitedScorecard {
   full?: FullInnings[]; // detailed batter/bowler lines (both teams, both innings)
   /** Present only when the main match finished level and a Super Over decided it. */
   superOver?: SuperOver;
+  /** Ball-by-ball record of both innings, in playing order. */
+  timeline?: TimelineInnings[];
 }
 
 export interface SuperOverSide {
