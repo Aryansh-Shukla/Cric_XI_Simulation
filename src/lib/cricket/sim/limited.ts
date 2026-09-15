@@ -8,6 +8,8 @@ import type {
   GameMode,
   FullInnings,
   SuperOver,
+  BallEvent,
+  TimelineInnings,
 } from "../types";
 import { KNOCKOUT_STAGES } from "../types";
 import { attrs, battingOrder, bowlingPool, wicketkeeper } from "./attributes";
@@ -607,6 +609,76 @@ export function toFullInnings(s: InningsState, label?: string): FullInnings {
     bowlers,
     fall: s.fallOfWickets.map((f) => ({ ...f })),
     label,
+  };
+}
+
+/**
+ * Ball-by-ball timeline for the Match Centre. Pure replay of the simulated
+ * events — it can never diverge from the scorecard because it is derived
+ * from exactly the same event list.
+ */
+export function toTimeline(s: InningsState, label: string): TimelineInnings {
+  const maxOvers = s.format === "T20" ? 20 : 50;
+  let score = 0;
+  let wickets = 0;
+  let partRuns = 0;
+  let partBalls = 0;
+  const batTotals = new Map<string, { runs: number; balls: number }>();
+  const bowlTotals = new Map<string, { runs: number; balls: number; wickets: number }>();
+
+  const balls: BallEvent[] = s.events.map((e) => {
+    const bat = batTotals.get(e.batter.name) ?? { runs: 0, balls: 0 };
+    const bowl = bowlTotals.get(e.bowler.name) ?? { runs: 0, balls: 0, wickets: 0 };
+    bat.balls++;
+    bowl.balls++;
+    partBalls++;
+    if (e.wicket) {
+      wickets++;
+      bowl.wickets++;
+    } else {
+      score += e.runs;
+      bat.runs += e.runs;
+      bowl.runs += e.runs;
+      partRuns += e.runs;
+    }
+    batTotals.set(e.batter.name, bat);
+    bowlTotals.set(e.bowler.name, bowl);
+    const ev: BallEvent = {
+      over: e.over,
+      ball: e.ball,
+      batter: e.batter.name,
+      bowler: e.bowler.name,
+      runs: e.runs,
+      wicket: e.wicket,
+      dismissal: e.dismissal,
+      score,
+      wickets,
+      batterRuns: bat.runs,
+      batterBalls: bat.balls,
+      bowlerWickets: bowl.wickets,
+      bowlerRuns: bowl.runs,
+      bowlerBalls: bowl.balls,
+      partnershipRuns: partRuns,
+      partnershipBalls: partBalls,
+      partnershipWicket: e.wicket ? wickets : wickets + 1,
+      phase: e.phase,
+    };
+    if (e.wicket) {
+      partRuns = 0;
+      partBalls = 0;
+    }
+    return ev;
+  });
+
+  return {
+    teamName: s.teamName,
+    label,
+    format: s.format,
+    maxOvers,
+    target: s.target,
+    runs: s.runs,
+    wickets: s.wickets,
+    balls,
   };
 }
 
