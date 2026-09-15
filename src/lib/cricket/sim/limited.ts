@@ -1094,6 +1094,10 @@ export function simulateLimitedMatch(
     toFullInnings(firstState, "1st Innings"),
     toFullInnings(secondState, "2nd Innings"),
   ];
+  scorecard.timeline = [
+    toTimeline(firstState, "1st Innings"),
+    toTimeline(secondState, "2nd Innings"),
+  ];
 
   // Sanity checks
   validateLimited(scorecard);
