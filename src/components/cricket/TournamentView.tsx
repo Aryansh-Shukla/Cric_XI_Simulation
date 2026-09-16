@@ -40,6 +40,7 @@ import { momentumLabel, pressureLabel } from "@/lib/cricket/momentum";
 import { MODE_LABELS } from "@/lib/cricket/data";
 import { recordChampion } from "@/lib/cricket/champions";
 import { ScorecardModal } from "./ScorecardModal";
+import { MatchCentre } from "./MatchCentre";
 
 interface Props {
   players: Player[];
@@ -226,6 +227,19 @@ function TournamentInner({ players, mode, leadership, teamName, onRestart }: Pro
           {tab === "standings" && <StandingsPanel state={state} />}
         </div>
       </div>
+
+      {live && (
+        <MatchCentre
+          key={state.results.length}
+          result={live}
+          momentum={state.momentum}
+          pressure={state.pressure}
+          chemistry={state.chemistry.score}
+          balance={state.chemistry.balance.label}
+          onScorecard={() => setScorecard(live)}
+          onContinue={() => setLive(null)}
+        />
+      )}
 
       <ScorecardModal result={scorecard} onClose={() => setScorecard(null)} />
     </div>
