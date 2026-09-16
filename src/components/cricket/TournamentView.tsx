@@ -122,6 +122,8 @@ function TournamentInner({ players, mode, leadership, teamName, onRestart }: Pro
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<Tab>("matches");
   const [scorecard, setScorecard] = useState<MatchResult | null>(null);
+  /** Result currently being played out in the Match Centre. */
+  const [live, setLive] = useState<MatchResult | null>(null);
   const recorded = useRef(false);
 
   // Persist a real champions-feed record once the campaign is won.
@@ -149,7 +151,14 @@ function TournamentInner({ players, mode, leadership, teamName, onRestart }: Pro
     setBusy(true);
     // Yield to allow spinner paint before heavy sim
     setTimeout(() => {
-      setState((prev) => advanceTournament(prev));
+      setState((prev) => {
+        const next = advanceTournament(prev);
+        // Open the Match Centre on the match that was just simulated: the live
+        // view only ever reveals this canonical result.
+        const fresh = next.results[next.results.length - 1];
+        if (fresh && next.results.length !== prev.results.length) setLive(fresh);
+        return next;
+      });
       setBusy(false);
     }, 60);
   };
