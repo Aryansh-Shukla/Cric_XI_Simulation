@@ -434,8 +434,9 @@ export function testProgress(r: TestScorecard): TestInningsCard[] {
     if (e.isOurs) ourTotal += e.inn.runs;
     else oppTotal += e.inn.runs;
     const leadAfter = e.isOurs ? ourTotal - oppTotal : oppTotal - ourTotal;
-    const chasing = i === 3 || (i === 2 && !!second[1]?.inn.followOn === false && false);
-    const target = chasing ? Math.max(0, -1 * (leadAfter - e.inn.runs) + 1) : undefined;
+    // The last innings of the match is a chase whenever the side started it behind.
+    const leadBefore = leadAfter - e.inn.runs;
+    const target = i === order.length - 1 && leadBefore < 0 ? -leadBefore + 1 : undefined;
     const note = e.inn.declared
       ? "Declared"
       : e.inn.followOn
