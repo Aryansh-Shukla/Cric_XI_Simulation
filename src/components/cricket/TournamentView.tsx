@@ -207,9 +207,17 @@ function TournamentInner({ players, mode, leadership, teamName, onRestart }: Pro
                     transition={{ duration: 0.4 }}
                   >
                     {isLimited(r) ? (
-                      <LimitedCard r={r} onView={() => setScorecard(r)} />
+                      <LimitedCard
+                        r={r}
+                        onView={() => setScorecard(r)}
+                        onRelive={() => setLive(r)}
+                      />
                     ) : (
-                      <TestCard r={r as TestScorecard} onView={() => setScorecard(r)} />
+                      <TestCard
+                        r={r as TestScorecard}
+                        onView={() => setScorecard(r)}
+                        onRelive={() => setLive(r)}
+                      />
                     )}
                   </motion.div>
                 ))}
@@ -675,8 +683,16 @@ function StageTimeline({ state }: { state: TournamentState }) {
   );
 }
 
-function LimitedCard({ r, onView }: { r: LimitedScorecard; onView: () => void }) {
-  return <LimitedCardInner r={r} onView={onView} />;
+function LimitedCard({
+  r,
+  onView,
+  onRelive,
+}: {
+  r: LimitedScorecard;
+  onView: () => void;
+  onRelive: () => void;
+}) {
+  return <LimitedCardInner r={r} onView={onView} onRelive={onRelive} />;
 }
 
 /** Super Over breakdown — shown wherever a tied match is reported. */
@@ -704,7 +720,15 @@ function SuperOverStrip({ r }: { r: LimitedScorecard }) {
   );
 }
 
-function LimitedCardInner({ r, onView }: { r: LimitedScorecard; onView: () => void }) {
+function LimitedCardInner({
+  r,
+  onView,
+  onRelive,
+}: {
+  r: LimitedScorecard;
+  onView: () => void;
+  onRelive: () => void;
+}) {
   const WIcon = weatherIcon(r.weather);
   const ringClass = r.weWon
     ? "ring-1 ring-[color:var(--accent)]/40"
@@ -772,7 +796,13 @@ function LimitedCardInner({ r, onView }: { r: LimitedScorecard; onView: () => vo
         ))}
       </ul>
 
-      <div className="flex justify-end border-t border-[color:var(--border)] px-5 py-3">
+      <div className="flex flex-wrap justify-end gap-2 border-t border-[color:var(--border)] px-5 py-3">
+        <button
+          onClick={onRelive}
+          className="btn-ghost-gold inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs"
+        >
+          <Play className="h-3.5 w-3.5" /> Match Centre
+        </button>
         <button
           onClick={onView}
           className="btn-ghost-gold inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs"
@@ -815,7 +845,15 @@ function InningsBlock({
   );
 }
 
-function TestCard({ r, onView }: { r: TestScorecard; onView: () => void }) {
+function TestCard({
+  r,
+  onView,
+  onRelive,
+}: {
+  r: TestScorecard;
+  onView: () => void;
+  onRelive: () => void;
+}) {
   const WIcon = weatherIcon(r.weather);
   const ringClass =
     r.result === "WON"
@@ -884,7 +922,13 @@ function TestCard({ r, onView }: { r: TestScorecard; onView: () => void }) {
         ))}
       </ul>
 
-      <div className="flex justify-end border-t border-[color:var(--border)] px-5 py-3">
+      <div className="flex flex-wrap justify-end gap-2 border-t border-[color:var(--border)] px-5 py-3">
+        <button
+          onClick={onRelive}
+          className="btn-ghost-gold inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs"
+        >
+          <Play className="h-3.5 w-3.5" /> Match Centre
+        </button>
         <button
           onClick={onView}
           className="btn-ghost-gold inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs"
