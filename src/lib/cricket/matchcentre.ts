@@ -240,7 +240,10 @@ function variant<T>(arr: T[], seed: number): T {
  * actually was; the surrounding state only colours the wording.
  */
 export function ballCommentary(e: BallEvent, inn: TimelineInnings, chasingNeed?: number): string {
-  const seed = e.over * 7 + e.ball * 3 + e.runs;
+  // Deterministic per delivery, but varied enough that repeated outcomes in a
+  // single over do not read as the same sentence twice.
+  const nameSeed = e.batter.length * 5 + e.bowler.length * 3 + e.batterBalls;
+  const seed = e.over * 7 + e.ball * 3 + e.runs + nameSeed;
   const death = e.phase === "DEATH";
   const pp = e.phase === "PP";
   if (e.wicket) {
