@@ -152,14 +152,13 @@ function TournamentInner({ players, mode, leadership, teamName, onRestart }: Pro
     setBusy(true);
     // Yield to allow spinner paint before heavy sim
     setTimeout(() => {
-      setState((prev) => {
-        const next = advanceTournament(prev);
-        // Open the Match Centre on the match that was just simulated: the live
-        // view only ever reveals this canonical result.
-        const fresh = next.results[next.results.length - 1];
-        if (fresh && next.results.length !== prev.results.length) setLive(fresh);
-        return next;
-      });
+      const next = advanceTournament(state);
+      setState(next);
+      // Open the Match Centre on the match that was just simulated: the live
+      // view only ever reveals this canonical result.
+      if (next.results.length > state.results.length) {
+        setLive(next.results[next.results.length - 1]);
+      }
       setBusy(false);
     }, 60);
   };
