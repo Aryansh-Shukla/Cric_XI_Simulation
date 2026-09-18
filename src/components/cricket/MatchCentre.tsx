@@ -115,7 +115,7 @@ function LimitedCentre({
   onScorecard,
   onContinue,
 }: Props & { result: LimitedScorecard }) {
-  const timeline = r.timeline ?? [];
+  const timeline = useMemo(() => r.timeline ?? [], [r]);
   const totalBalls = useMemo(
     () => timeline.reduce((s, inn) => s + inn.balls.length, 0),
     [timeline],
