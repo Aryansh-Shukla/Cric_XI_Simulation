@@ -1,10 +1,4 @@
-import type {
-  BallEvent,
-  LimitedScorecard,
-  TestScorecard,
-  TimelineInnings,
-  Innings,
-} from "./types";
+import type { BallEvent, LimitedScorecard, TestScorecard, TimelineInnings, Innings } from "./types";
 
 /* ------------------------------------------------------------------ *
  * Match Centre analytics.
@@ -245,12 +239,11 @@ function variant<T>(arr: T[], seed: number): T {
  * One line of commentary for one delivery. Grounded strictly in what the ball
  * actually was; the surrounding state only colours the wording.
  */
-export function ballCommentary(
-  e: BallEvent,
-  inn: TimelineInnings,
-  chasingNeed?: number,
-): string {
-  const seed = e.over * 7 + e.ball * 3 + e.runs;
+export function ballCommentary(e: BallEvent, inn: TimelineInnings, chasingNeed?: number): string {
+  // Deterministic per delivery, but varied enough that repeated outcomes in a
+  // single over do not read as the same sentence twice.
+  const nameSeed = e.batter.length * 5 + e.bowler.length * 3 + e.batterBalls;
+  const seed = e.over * 7 + e.ball * 3 + e.runs + nameSeed;
   const death = e.phase === "DEATH";
   const pp = e.phase === "PP";
   if (e.wicket) {
@@ -301,10 +294,7 @@ export function ballCommentary(
         : null;
     return (
       pressure ??
-      variant(
-        [`Dot ball, ${e.bowler} on the money.`, `${e.batter} defends, no run.`],
-        seed,
-      )
+      variant([`Dot ball, ${e.bowler} on the money.`, `${e.batter} defends, no run.`], seed)
     );
   }
   return variant(
@@ -341,10 +331,12 @@ export function milestonesAt(inn: TimelineInnings, index: number): Milestone[] {
       out.push({ kind: "batter", text: `HUNDRED — ${e.batter} off ${e.batterBalls} balls` });
   }
   if (e.wicket) {
-    if (e.bowlerWickets === 3)
-      out.push({ kind: "bowler", text: `${e.bowler} has three wickets` });
+    if (e.bowlerWickets === 3) out.push({ kind: "bowler", text: `${e.bowler} has three wickets` });
     if (e.bowlerWickets === 5)
-      out.push({ kind: "bowler", text: `FIVE-FOR — ${e.bowler} ${e.bowlerWickets}/${e.bowlerRuns}` });
+      out.push({
+        kind: "bowler",
+        text: `FIVE-FOR — ${e.bowler} ${e.bowlerWickets}/${e.bowlerRuns}`,
+      });
   }
   const prevScore = prev ? prev.score : 0;
   for (const m of TEAM_MARKS) {
@@ -365,8 +357,7 @@ export function milestonesAt(inn: TimelineInnings, index: number): Milestone[] {
       });
   }
   const ballsBowled = index + 1;
-  if (ballsBowled === (inn.maxOvers - 1) * 6 + 1)
-    out.push({ kind: "match", text: "Final over" });
+  if (ballsBowled === (inn.maxOvers - 1) * 6 + 1) out.push({ kind: "match", text: "Final over" });
   if (inn.target !== undefined) {
     const need = inn.target - e.score;
     const ballsLeft = inn.maxOvers * 6 - ballsBowled;

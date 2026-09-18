@@ -115,7 +115,7 @@ function LimitedCentre({
   onScorecard,
   onContinue,
 }: Props & { result: LimitedScorecard }) {
-  const timeline = r.timeline ?? [];
+  const timeline = useMemo(() => r.timeline ?? [], [r]);
   const totalBalls = useMemo(
     () => timeline.reduce((s, inn) => s + inn.balls.length, 0),
     [timeline],
@@ -249,11 +249,7 @@ function LimitedCentre({
             <Stat label="Overs" value={`${snap.overs} / ${inn?.maxOvers ?? 0}`} />
           )}
           {snap.runsRequired !== undefined ? (
-            <Stat
-              label="Need"
-              value={`${snap.runsRequired} off ${snap.ballsRemaining}`}
-              accent
-            />
+            <Stat label="Need" value={`${snap.runsRequired} off ${snap.ballsRemaining}`} accent />
           ) : (
             <Stat label="Overs left" value={snap.oversRemaining} />
           )}
@@ -270,7 +266,9 @@ function LimitedCentre({
           <Stat
             label="On strike"
             value={
-              snap.striker ? `${snap.striker.name} ${snap.striker.runs} (${snap.striker.balls})` : "—"
+              snap.striker
+                ? `${snap.striker.name} ${snap.striker.runs} (${snap.striker.balls})`
+                : "—"
             }
           />
           <Stat
@@ -327,7 +325,9 @@ function LimitedCentre({
                 <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
                   {e.over}.{e.ball}
                 </span>
-                <span className={`shrink-0 font-semibold ${e.wicket ? "text-[color:var(--destructive)]" : ""}`}>
+                <span
+                  className={`shrink-0 font-semibold ${e.wicket ? "text-[color:var(--destructive)]" : ""}`}
+                >
                   {e.wicket ? "W" : e.runs}
                 </span>
                 <span className="min-w-0 break-words">
@@ -400,7 +400,8 @@ function ScoreSide({
 }) {
   return (
     <div className={align === "right" ? "text-right" : ""}>
-      <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-muted-foreground"
+      <div
+        className="flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-muted-foreground"
         style={{ justifyContent: align === "right" ? "flex-end" : "flex-start" }}
       >
         {live && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[color:var(--gold)]" />}
