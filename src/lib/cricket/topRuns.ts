@@ -25,7 +25,9 @@ function read(): CompletedRun[] {
   try {
     const raw = window.localStorage.getItem(KEY);
     const parsed: unknown = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? (parsed as CompletedRun[]).filter((r) => typeof r?.score === "number") : [];
+    return Array.isArray(parsed)
+      ? (parsed as CompletedRun[]).filter((r) => typeof r?.score === "number")
+      : [];
   } catch {
     return [];
   }

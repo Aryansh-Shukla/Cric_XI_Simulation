@@ -97,34 +97,52 @@ export function Landing({ onPlay }: Props) {
           className="mt-14 w-full max-w-3xl"
         >
           <div className="mb-3 flex items-center gap-2 px-2 text-xs uppercase tracking-widest text-muted-foreground">
-            <Users className="h-3.5 w-3.5" /> Recent Champions
+            <Users className="h-3.5 w-3.5" /> Top Runs
           </div>
           <div className="glass-card grid gap-2 rounded-2xl p-2">
-            {champions.map((c) => (
-              <div
-                key={c.id}
-                className="flex items-center justify-between gap-3 rounded-xl px-4 py-3 hover:bg-white/5"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[color:var(--gold)]/10 text-sm text-gold">
-                    🏆
-                  </div>
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-medium">{c.teamName}</div>
-                    <div className="truncate text-xs text-muted-foreground">{c.achievement}</div>
-                  </div>
+            {runs === null ? (
+              <div className="h-[72px]" />
+            ) : runs.length === 0 ? (
+              <div className="px-4 py-6 text-center">
+                <div className="text-sm font-semibold uppercase tracking-widest text-gold">
+                  No completed runs yet
                 </div>
-                <div className="shrink-0 text-right">
-                  <div className="text-xs font-semibold text-gold">{c.score.toLocaleString()}</div>
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                    {new Date(c.date).toLocaleDateString(undefined, {
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  Complete your first campaign to appear here.
                 </div>
               </div>
-            ))}
+            ) : (
+              runs.map((c, i) => (
+                <div
+                  key={c.id}
+                  className="flex items-center justify-between gap-3 rounded-xl px-4 py-3 hover:bg-white/5"
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[color:var(--gold)]/10 text-sm font-bold text-gold">
+                      {i + 1}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium">{c.teamName}</div>
+                      <div className="truncate text-xs text-muted-foreground">
+                        {c.tournament} · {c.finalResult}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <div className="text-xs font-semibold text-gold">
+                      {c.score.toLocaleString()}
+                    </div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                      {new Date(c.date).toLocaleDateString(undefined, {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </motion.div>
 
