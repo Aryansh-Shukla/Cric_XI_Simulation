@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Play, Calendar, Trophy, HelpCircle, Users, Github } from "lucide-react";
 import { HowToPlay } from "./HowToPlay";
-import { listChampions } from "@/lib/cricket/champions";
+import { listTopRuns, type CompletedRun } from "@/lib/cricket/topRuns";
 
 interface Props {
   onPlay: () => void;
@@ -10,7 +10,9 @@ interface Props {
 
 export function Landing({ onPlay }: Props) {
   const [howToOpen, setHowToOpen] = useState(false);
-  const [champions] = useState(() => listChampions(3));
+  // Read local storage after mount only — keeps SSR and hydration identical.
+  const [runs, setRuns] = useState<CompletedRun[] | null>(null);
+  useEffect(() => setRuns(listTopRuns(3)), []);
   return (
     <div className="relative min-h-screen overflow-hidden">
       <div

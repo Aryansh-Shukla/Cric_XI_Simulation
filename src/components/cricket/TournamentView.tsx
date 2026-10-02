@@ -196,6 +196,7 @@ function TournamentInner({ players, mode, leadership, teamName, onRestart }: Pro
   return (
     <div className="relative min-h-screen px-6 py-10">
       {won && <Confetti />}
+      {!live && <StoryMomentBanner moment={moment} onDone={clearMoment} />}
       <div className="mx-auto max-w-5xl">
         <Header state={state} mode={mode} onRestart={onRestart} />
         <StageTimeline state={state} />
@@ -470,6 +471,7 @@ function FinaleCard({
           Player of the Series: <span className="text-foreground">{state.playerOfSeries}</span>
         </div>
       )}
+      <CampaignRecap state={state} />
       <CampaignAwards state={state} />
       <div className="mt-6 flex justify-center gap-2">
         <button
