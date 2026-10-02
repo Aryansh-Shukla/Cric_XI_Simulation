@@ -46,7 +46,10 @@ function margin(r: LimitedScorecard): { runs?: number; wickets?: number } {
 function isClose(r: LimitedScorecard): boolean {
   if (r.superOver) return true;
   const m = margin(r);
-  return (m.runs !== undefined && m.runs <= (r.format === "T20" ? 6 : 12)) || (m.wickets !== undefined && m.wickets <= 2);
+  return (
+    (m.runs !== undefined && m.runs <= (r.format === "T20" ? 6 : 12)) ||
+    (m.wickets !== undefined && m.wickets <= 2)
+  );
 }
 
 const clean = (s: string) => s.replace(/ XI$/, "");
@@ -77,7 +80,13 @@ export function detectStorylines(state: TournamentState): Storyline[] {
       description: `The campaign ended with a ${state.wins}–${state.losses} record.`,
     });
   const reachedFinal = state.fixtures.findIndex((f) => f.stage === "Final");
-  if (!state.championshipWon && reachedFinal >= 0 && reachedFinal <= state.currentIndex && state.mode !== "TEST" && (state.currentIndex === reachedFinal || state.results[reachedFinal]))
+  if (
+    !state.championshipWon &&
+    reachedFinal >= 0 &&
+    reachedFinal <= state.currentIndex &&
+    state.mode !== "TEST" &&
+    (state.currentIndex === reachedFinal || state.results[reachedFinal])
+  )
     out.push({
       id: "final",
       type: "FINAL_APPEARANCE",
@@ -114,7 +123,12 @@ export function detectStorylines(state: TournamentState): Storyline[] {
       description: `${name} need to stop the slide.`,
     });
   // Comeback: lost at least one of the first two, then won 2+ straight since.
-  if (res.length >= 3 && res.slice(0, 2).some((r) => outcomeOf(r) === "L") && streak?.kind === "W" && streak.n >= 2)
+  if (
+    res.length >= 3 &&
+    res.slice(0, 2).some((r) => outcomeOf(r) === "L") &&
+    streak?.kind === "W" &&
+    streak.n >= 2
+  )
     out.push({
       id: "comeback",
       type: "COMEBACK",
@@ -255,31 +269,78 @@ export function detectMoment(prev: TournamentState, next: TournamentState): Stor
     return {
       id: `m-${n}`,
       title: "TOURNAMENT OVER",
-      subtitle: next.eliminated ? `Knocked out at the ${next.eliminatedAt}.` : (next.seriesResult ?? ""),
+      subtitle: next.eliminated
+        ? `Knocked out at the ${next.eliminatedAt}.`
+        : (next.seriesResult ?? ""),
       tone: "muted",
     };
   }
   const upcoming = next.fixtures[next.currentIndex]?.stage;
   if (upcoming === "Final" && prev.fixtures[prev.currentIndex]?.stage !== "Final")
-    return { id: `m-${n}`, title: "THE FINAL AWAITS", subtitle: `${next.ourName} are one win from the title.`, tone: "gold" };
+    return {
+      id: `m-${n}`,
+      title: "THE FINAL AWAITS",
+      subtitle: `${next.ourName} are one win from the title.`,
+      tone: "gold",
+    };
   if (next.qualifiedRank !== undefined && prev.qualifiedRank === undefined) {
-    const label = upcoming === "Semi Final" ? "SEMIFINAL BOUND" : upcoming === "Super 8" ? "INTO THE SUPER 8" : "QUALIFIED";
-    return { id: `m-${n}`, title: label, subtitle: `Finished ${next.qualifiedRank} on the table.`, tone: "accent" };
+    const label =
+      upcoming === "Semi Final"
+        ? "SEMIFINAL BOUND"
+        : upcoming === "Super 8"
+          ? "INTO THE SUPER 8"
+          : "QUALIFIED";
+    return {
+      id: `m-${n}`,
+      title: label,
+      subtitle: `Finished ${next.qualifiedRank} on the table.`,
+      tone: "accent",
+    };
   }
   if (upcoming === "Semi Final" && prev.fixtures[prev.currentIndex]?.stage !== "Semi Final")
-    return { id: `m-${n}`, title: "SEMIFINAL BOUND", subtitle: "Win and the Final awaits.", tone: "accent" };
+    return {
+      id: `m-${n}`,
+      title: "SEMIFINAL BOUND",
+      subtitle: "Win and the Final awaits.",
+      tone: "accent",
+    };
   const streak = currentStreak(next.results);
   if (outcomeOf(last) === "W" && prev.results.length >= 2) {
     const prevStreak = currentStreak(prev.results);
     if (prevStreak && prevStreak.kind === "L" && prevStreak.n >= 2)
-      return { id: `m-${n}`, title: "WHAT A COMEBACK", subtitle: `A win ends a ${prevStreak.n}-match slide.`, tone: "accent" };
+      return {
+        id: `m-${n}`,
+        title: "WHAT A COMEBACK",
+        subtitle: `A win ends a ${prevStreak.n}-match slide.`,
+        tone: "accent",
+      };
   }
   if (streak && streak.kind === "W" && (streak.n === 3 || streak.n === 5))
-    return { id: `m-${n}`, title: streak.n === 3 ? "THREE STRAIGHT WINS" : "FIVE IN A ROW", subtitle: `${next.ourName} are rolling.`, tone: "gold" };
-  if (isLimitedResult(last) && last.weWon && (KNOCKOUT_STAGES as string[]).includes(last.stage) && last.superOver)
+    return {
+      id: `m-${n}`,
+      title: streak.n === 3 ? "THREE STRAIGHT WINS" : "FIVE IN A ROW",
+      subtitle: `${next.ourName} are rolling.`,
+      tone: "gold",
+    };
+  if (
+    isLimitedResult(last) &&
+    last.weWon &&
+    (KNOCKOUT_STAGES as string[]).includes(last.stage) &&
+    last.superOver
+  )
     return { id: `m-${n}`, title: "SUPER OVER WIN", subtitle: last.resultLine, tone: "gold" };
   // Successful high chase in the latest match.
-  if (isLimitedResult(last) && last.weWon && !teamABattedFirst(last) && last.oppInnings.runs >= (last.format === "T20" ? 190 : 320))
-    return { id: `m-${n}`, title: "WHAT A CHASE", subtitle: `${last.oppInnings.runs} hunted down.`, tone: "accent" };
+  if (
+    isLimitedResult(last) &&
+    last.weWon &&
+    !teamABattedFirst(last) &&
+    last.oppInnings.runs >= (last.format === "T20" ? 190 : 320)
+  )
+    return {
+      id: `m-${n}`,
+      title: "WHAT A CHASE",
+      subtitle: `${last.oppInnings.runs} hunted down.`,
+      tone: "accent",
+    };
   return null;
 }

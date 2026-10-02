@@ -1,4 +1,12 @@
-import { Component, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  Component,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Trophy,
@@ -38,9 +46,20 @@ import {
 } from "@/lib/cricket/tournament";
 import { momentumLabel, pressureLabel } from "@/lib/cricket/momentum";
 import { MODE_LABELS } from "@/lib/cricket/data";
-import { recordChampion } from "@/lib/cricket/champions";
+import { recordCompletedRun } from "@/lib/cricket/topRuns";
+import { campaignSummary, finalResultLabel, formatNrr } from "@/lib/cricket/campaign";
+import { detectMoment, detectStorylines, type StoryMoment } from "@/lib/cricket/storylines";
 import { ScorecardModal } from "./ScorecardModal";
 import { MatchCentre } from "./MatchCentre";
+import {
+  AroundTournament,
+  CampaignPanel,
+  PhaseTable,
+  QualificationBanner,
+  RecordsPanel,
+  StoryMomentBanner,
+  StorylinesPanel,
+} from "./TournamentImmersion";
 
 interface Props {
   players: Player[];
@@ -126,19 +145,28 @@ function TournamentInner({ players, mode, leadership, teamName, onRestart }: Pro
   /** Result currently being played out in the Match Centre. */
   const [live, setLive] = useState<MatchResult | null>(null);
   const recorded = useRef(false);
+  /** State before the latest match — drives table movement and story moments. */
+  const [prevState, setPrevState] = useState<TournamentState | null>(null);
+  const [moment, setMoment] = useState<StoryMoment | null>(null);
+  const clearMoment = useCallback(() => setMoment(null), []);
 
-  // Persist a real champions-feed record once the campaign is won.
+  // Record every completed campaign (won or not) exactly once. The tournament
+  // seed is the stable id, so re-renders/effects can never duplicate it.
   useEffect(() => {
-    if (!state.complete || !state.championshipWon || recorded.current) return;
+    if (!state.complete || recorded.current) return;
     recorded.current = true;
-    const tournament = MODE_LABELS[mode].title;
-    recordChampion({
+    recordCompletedRun({
+      id: `run-${state.seed}`,
       teamName: state.ourName,
-      tournament,
-      achievement: `Won ${tournament}`,
+      tournament: MODE_LABELS[mode].title,
+      finalResult: finalResultLabel(state),
       score: state.finalScore,
+      wins: state.wins,
+      losses: state.losses,
+      draws: state.draws,
+      won: state.championshipWon,
     });
-  }, [state.complete, state.championshipWon, state.ourName, state.finalScore, mode]);
+  }, [state, mode]);
 
   const nextFixture = state.fixtures[state.currentIndex];
   const done = state.complete;
@@ -153,7 +181,9 @@ function TournamentInner({ players, mode, leadership, teamName, onRestart }: Pro
     // Yield to allow spinner paint before heavy sim
     setTimeout(() => {
       const next = advanceTournament(state);
+      setPrevState(state);
       setState(next);
+      setMoment(detectMoment(state, next));
       // Open the Match Centre on the match that was just simulated: the live
       // view only ever reveals this canonical result.
       if (next.results.length > state.results.length) {
@@ -166,6 +196,7 @@ function TournamentInner({ players, mode, leadership, teamName, onRestart }: Pro
   return (
     <div className="relative min-h-screen px-6 py-10">
       {won && <Confetti />}
+      {!live && <StoryMomentBanner moment={moment} onDone={clearMoment} />}
       <div className="mx-auto max-w-5xl">
         <Header state={state} mode={mode} onRestart={onRestart} />
         <StageTimeline state={state} />
@@ -197,6 +228,8 @@ function TournamentInner({ players, mode, leadership, teamName, onRestart }: Pro
         <div className="mt-4 space-y-4">
           {tab === "matches" && (
             <>
+              <QualificationBanner state={state} />
+              {state.results.length > 0 && !done && <CampaignPanel state={state} />}
               <AnimatePresence>
                 {state.results.map((r, i) => (
                   <motion.div
@@ -225,13 +258,24 @@ function TournamentInner({ players, mode, leadership, teamName, onRestart }: Pro
               {!done && nextFixture && <NextMatchCard state={state} onPlay={play} busy={busy} />}
 
               {done && <FinaleCard state={state} mode={mode} onRestart={onRestart} />}
+
+              {state.results.length > 0 && <StorylinesPanel state={state} />}
+              <AroundTournament state={state} />
             </>
           )}
 
           {tab === "leaders" && (
-            <LeadersPanel runScorers={runScorers} wicketTakers={wicketTakers} />
+            <>
+              <LeadersPanel runScorers={runScorers} wicketTakers={wicketTakers} />
+              <RecordsPanel state={state} />
+            </>
           )}
-          {tab === "standings" && <StandingsPanel state={state} />}
+          {tab === "standings" && (
+            <>
+              <PhaseTable state={state} prev={prevState} />
+              <StandingsPanel state={state} />
+            </>
+          )}
         </div>
       </div>
 
@@ -427,6 +471,7 @@ function FinaleCard({
           Player of the Series: <span className="text-foreground">{state.playerOfSeries}</span>
         </div>
       )}
+      <CampaignRecap state={state} />
       <CampaignAwards state={state} />
       <div className="mt-6 flex justify-center gap-2">
         <button

@@ -219,7 +219,10 @@ export function qualificationStatus(state: TournamentState): QualificationStatus
       tone: "warn",
     };
   return {
-    headline: rank <= cut ? `${ordinal(rank)} — inside the top ${cut}` : `${ordinal(rank)} — chasing the top ${cut}`,
+    headline:
+      rank <= cut
+        ? `${ordinal(rank)} — inside the top ${cut}`
+        : `${ordinal(rank)} — chasing the top ${cut}`,
     detail:
       strictAboveIfWinOut === 0 && threatsIfWinOut >= cut
         ? `${R} game${R === 1 ? "" : "s"} left. Winning out may still come down to NRR.`
@@ -237,7 +240,11 @@ function knockoutStatus(state: TournamentState, stage: StageKind): Qualification
         tone: "good",
       };
     case "Semi Final":
-      return { headline: "Semi-final", detail: "Win and the Final awaits. Lose and it's over.", tone: "warn" };
+      return {
+        headline: "Semi-final",
+        detail: "Win and the Final awaits. Lose and it's over.",
+        tone: "warn",
+      };
     case "Qualifier 1":
       return {
         headline: "Qualifier 1",
@@ -245,9 +252,17 @@ function knockoutStatus(state: TournamentState, stage: StageKind): Qualification
         tone: "good",
       };
     case "Qualifier 2":
-      return { headline: "Qualifier 2", detail: "Winner goes to the Final. Loser goes home.", tone: "warn" };
+      return {
+        headline: "Qualifier 2",
+        detail: "Winner goes to the Final. Loser goes home.",
+        tone: "warn",
+      };
     case "Eliminator":
-      return { headline: "Eliminator", detail: "Knockout — win to reach Qualifier 2.", tone: "warn" };
+      return {
+        headline: "Eliminator",
+        detail: "Knockout — win to reach Qualifier 2.",
+        tone: "warn",
+      };
     default:
       return { headline: stage, detail: "Knockout match.", tone: "warn" };
   }
@@ -266,13 +281,29 @@ function testSeriesStatus(state: TournamentState): QualificationStatus {
       tone: w > l ? "good" : w < l ? "bad" : "neutral",
     };
   if (played === 0)
-    return { headline: `${total}-Test series`, detail: `Against ${opp}. Series level 0–0.`, tone: "neutral" };
+    return {
+      headline: `${total}-Test series`,
+      detail: `Against ${opp}. Series level 0–0.`,
+      tone: "neutral",
+    };
   if (w - l > left)
-    return { headline: "Series secured", detail: `${w}–${l} with ${left} to play — the series is yours.`, tone: "good" };
+    return {
+      headline: "Series secured",
+      detail: `${w}–${l} with ${left} to play — the series is yours.`,
+      tone: "good",
+    };
   if (l - w > left)
-    return { headline: "Series lost", detail: `${w}–${l} with ${left} to play — playing for pride.`, tone: "bad" };
+    return {
+      headline: "Series lost",
+      detail: `${w}–${l} with ${left} to play — playing for pride.`,
+      tone: "bad",
+    };
   if (l - w === left)
-    return { headline: "Must win to draw the series", detail: `Trailing ${w}–${l} with ${left} to play.`, tone: "bad" };
+    return {
+      headline: "Must win to draw the series",
+      detail: `Trailing ${w}–${l} with ${left} to play.`,
+      tone: "bad",
+    };
   return {
     headline: w > l ? `Leading ${w}–${l}` : w < l ? `Trailing ${w}–${l}` : `Series level ${w}–${l}`,
     detail: `${left} Test${left === 1 ? "" : "s"} remaining.`,
@@ -298,12 +329,17 @@ export interface TableRowContext {
 }
 
 /** Phase table with movement vs. the previous matchday and clinched/eliminated flags. */
-export function tableContext(state: TournamentState, prev: TournamentState | null): TableRowContext[] {
+export function tableContext(
+  state: TournamentState,
+  prev: TournamentState | null,
+): TableRowContext[] {
   const rows = phaseTable(state);
   const prevRows = prev && prev.phaseStage === state.phaseStage ? phaseTable(prev) : [];
   const R = state.complete ? 0 : remainingInPhase(state);
   const cut = state.phaseStage ? advanceCut(state.mode, state.phaseStage) : 4;
-  const phaseOver = !state.fixtures[state.currentIndex] || state.fixtures[state.currentIndex].stage !== state.phaseStage;
+  const phaseOver =
+    !state.fixtures[state.currentIndex] ||
+    state.fixtures[state.currentIndex].stage !== state.phaseStage;
   return rows.map((row, i) => {
     const before = prevRows.findIndex((r) => r.name === row.name);
     const others = rows.filter((r) => r !== row);
@@ -361,10 +397,19 @@ export function tournamentRecords(state: TournamentState): RecordItem[] {
           hs = { b, team: inn.teamName, ours: batOurs };
       for (const bw of inn.bowlers)
         if (!bb || bw.wickets > bb.w || (bw.wickets === bb.w && bw.runs < bb.r))
-          bb = { name: bw.name, w: bw.wickets, r: bw.runs, team: bowlTeam, ours: user && bowlTeam === r.ourName };
-      if (!tt || inn.runs > tt.runs) tt = { runs: inn.runs, wk: inn.wickets, team: inn.teamName, ours: batOurs };
+          bb = {
+            name: bw.name,
+            w: bw.wickets,
+            r: bw.runs,
+            team: bowlTeam,
+            ours: user && bowlTeam === r.ourName,
+          };
+      if (!tt || inn.runs > tt.runs)
+        tt = { runs: inn.runs, wk: inn.wickets, team: inn.teamName, ours: batOurs };
     }
-    const sides = isLimitedResult(r) ? [r.ourInnings, r.oppInnings] : [...r.ourInnings, ...r.oppInnings];
+    const sides = isLimitedResult(r)
+      ? [r.ourInnings, r.oppInnings]
+      : [...r.ourInnings, ...r.oppInnings];
     for (const s of sides)
       if (s.partnership && (!pship || s.partnership.runs > pship.runs))
         pship = {
@@ -393,7 +438,12 @@ export function tournamentRecords(state: TournamentState): RecordItem[] {
       isOurs: hs.ours,
     });
   if (bb && bb.w > 0)
-    out.push({ label: "Best Bowling", value: `${bb.w}/${bb.r}`, who: `${bb.name} · ${clean(bb.team)}`, isOurs: bb.ours });
+    out.push({
+      label: "Best Bowling",
+      value: `${bb.w}/${bb.r}`,
+      who: `${bb.name} · ${clean(bb.team)}`,
+      isOurs: bb.ours,
+    });
   if (pship && pship.runs > 0)
     out.push({
       label: "Best Partnership",
@@ -402,9 +452,19 @@ export function tournamentRecords(state: TournamentState): RecordItem[] {
       isOurs: pship.ours,
     });
   if (tt)
-    out.push({ label: "Best Team Total", value: `${tt.runs}/${tt.wk}`, who: clean(tt.team), isOurs: tt.ours });
+    out.push({
+      label: "Best Team Total",
+      value: `${tt.runs}/${tt.wk}`,
+      who: clean(tt.team),
+      isOurs: tt.ours,
+    });
   if (chase)
-    out.push({ label: "Best Chase", value: `${chase.runs}/${chase.wk}`, who: clean(chase.team), isOurs: chase.ours });
+    out.push({
+      label: "Best Chase",
+      value: `${chase.runs}/${chase.wk}`,
+      who: clean(chase.team),
+      isOurs: chase.ours,
+    });
   return out;
 }
 
@@ -454,14 +514,20 @@ export function campaignSummary(state: TournamentState): CampaignSummary {
             bestInnings = { name: b.name, runs: b.runs, balls: b.balls, notOut: !b.out, vs };
       } else {
         for (const bw of inn.bowlers)
-          if (!bestBowling || bw.wickets > bestBowling.wickets || (bw.wickets === bestBowling.wickets && bw.runs < bestBowling.runs))
+          if (
+            !bestBowling ||
+            bw.wickets > bestBowling.wickets ||
+            (bw.wickets === bestBowling.wickets && bw.runs < bestBowling.runs)
+          )
             bestBowling = { name: bw.name, wickets: bw.wickets, runs: bw.runs, vs };
       }
     }
   }
   const ours = Object.values(state.playerStats).filter((p) => p.isOurs && p.team === state.ourName);
   const bat = [...ours].sort((a, b) => b.runs - a.runs)[0];
-  const bowl = [...ours].sort((a, b) => b.wickets - a.wickets || a.runsConceded - b.runsConceded)[0];
+  const bowl = [...ours].sort(
+    (a, b) => b.wickets - a.wickets || a.runsConceded - b.runsConceded,
+  )[0];
   const row = Object.values(state.standings).find((r) => r.isOurs);
   const s = currentStreak(state.results);
   return {
