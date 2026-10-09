@@ -17,7 +17,6 @@ export interface CompletedRun {
 }
 
 const KEY = "cricketxi.topruns.v1";
-const LEGACY_KEY = "cricketxi.champions.v1";
 
 function read(): CompletedRun[] {
   if (typeof window === "undefined") return [];
@@ -41,7 +40,6 @@ export function rankRuns(runs: CompletedRun[]): CompletedRun[] {
 
 /** Client-only. Call from an effect, never during render. */
 export function listTopRuns(limit = 3): CompletedRun[] {
-  if (typeof window !== "undefined") window.localStorage.removeItem(LEGACY_KEY);
   return rankRuns(read()).slice(0, limit);
 }
 
@@ -53,7 +51,6 @@ export function recordCompletedRun(run: Omit<CompletedRun, "date"> & { date?: st
   const record: CompletedRun = { ...run, date: run.date ?? new Date().toISOString() };
   try {
     window.localStorage.setItem(KEY, JSON.stringify(rankRuns([record, ...existing])));
-    window.localStorage.removeItem(LEGACY_KEY);
     return true;
   } catch {
     return false;
