@@ -1060,7 +1060,10 @@ function Confetti() {
 function CampaignRecap({ state }: { state: TournamentState }) {
   const summary = useMemo(() => campaignSummary(state), [state]);
   const moments = useMemo(
-    () => detectStorylines(state).filter((story) => story.scope !== "match").slice(0, 3),
+    () =>
+      detectStorylines(state)
+        .filter((story) => story.scope !== "match")
+        .slice(0, 3),
     [state],
   );
   const records = useMemo(() => tournamentRecords(state), [state]);
@@ -1068,7 +1071,10 @@ function CampaignRecap({ state }: { state: TournamentState }) {
   const cells: [string, string][] = [
     ["Result", finalResultLabel(state)],
     ["Matches played", String(summary.played)],
-    ["Record", `${summary.wins}W – ${summary.losses}L${summary.draws ? ` – ${summary.draws}D` : ""}`],
+    [
+      "Record",
+      `${summary.wins}W – ${summary.losses}L${summary.draws ? ` – ${summary.draws}D` : ""}`,
+    ],
     ["Runs scored", String(summary.runsFor)],
     ["Runs conceded", String(summary.runsAgainst)],
     ...(summary.nrr === null ? [] : ([["NRR", formatNrr(summary.nrr)]] as [string, string][])),
@@ -1084,10 +1090,21 @@ function CampaignRecap({ state }: { state: TournamentState }) {
         ? `${summary.bestBowling.name} ${summary.bestBowling.wickets}/${summary.bestBowling.runs} v ${summary.bestBowling.vs}`
         : "—",
     ],
-    ["Leading run scorer", summary.topBatter ? `${summary.topBatter.name} (${summary.topBatter.runs})` : "—"],
-    ["Leading wicket taker", summary.topBowler ? `${summary.topBowler.name} (${summary.topBowler.wickets})` : "—"],
+    [
+      "Leading run scorer",
+      summary.topBatter ? `${summary.topBatter.name} (${summary.topBatter.runs})` : "—",
+    ],
+    [
+      "Leading wicket taker",
+      summary.topBowler ? `${summary.topBowler.name} (${summary.topBowler.wickets})` : "—",
+    ],
     ["Final momentum", momentumLabel(state.momentum)],
-    ...(bestPartnership ? ([["Best partnership", `${bestPartnership.value} · ${bestPartnership.who}`]] as [string, string][]) : []),
+    ...(bestPartnership
+      ? ([["Best partnership", `${bestPartnership.value} · ${bestPartnership.who}`]] as [
+          string,
+          string,
+        ][])
+      : []),
   ];
 
   return (
@@ -1097,15 +1114,22 @@ function CampaignRecap({ state }: { state: TournamentState }) {
       </div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {cells.map(([label, value]) => (
-          <div key={label} className="min-w-0 rounded-xl border border-[color:var(--border)] bg-white/[0.03] p-3">
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+          <div
+            key={label}
+            className="min-w-0 rounded-xl border border-[color:var(--border)] bg-white/[0.03] p-3"
+          >
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              {label}
+            </div>
             <div className="truncate text-sm font-semibold">{value}</div>
           </div>
         ))}
       </div>
       {moments.length > 0 && (
         <div className="mt-3 rounded-xl border border-[color:var(--border)] bg-white/[0.03] p-3">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Key moments</div>
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Key moments
+          </div>
           <ul className="mt-1 space-y-1 text-xs">
             {moments.map((story) => (
               <li key={story.id}>
