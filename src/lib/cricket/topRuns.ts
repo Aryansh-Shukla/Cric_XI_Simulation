@@ -42,6 +42,7 @@ export function rankRuns(runs: CompletedRun[]): CompletedRun[] {
 
 /** Client-only. Call from an effect, never during render. */
 export function listTopRuns(limit = 3): CompletedRun[] {
+  if (typeof window !== "undefined") window.localStorage.removeItem(LEGACY_KEY);
   return rankRuns(read()).slice(0, limit);
 }
 
