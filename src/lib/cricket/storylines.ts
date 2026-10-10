@@ -82,6 +82,7 @@ export function detectStorylines(state: TournamentState): Storyline[] {
   const reachedFinal = state.fixtures.findIndex((f) => f.stage === "Final");
   if (
     !state.championshipWon &&
+    !state.eliminated &&
     reachedFinal >= 0 &&
     reachedFinal <= state.currentIndex &&
     state.mode !== "TEST" &&
