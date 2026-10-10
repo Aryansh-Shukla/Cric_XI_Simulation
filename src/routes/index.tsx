@@ -9,6 +9,24 @@ import { TournamentView } from "@/components/cricket/TournamentView";
 import type { Difficulty, GameMode, Player } from "@/lib/cricket/types";
 
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Cricket XI — Draft Legends, Build Dynasties" },
+      {
+        name: "description",
+        content:
+          "Draft a historical cricket XI, lead your team through iconic tournaments, and relive every match in Cricket XI.",
+      },
+      { property: "og:title", content: "Cricket XI — Draft Legends, Build Dynasties" },
+      {
+        property: "og:description",
+        content:
+          "Build a team from cricket history and guide them through an original tournament simulation.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: Index,
 });
 

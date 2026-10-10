@@ -161,7 +161,7 @@ function TournamentInner({ players, mode, leadership, teamName, onRestart }: Pro
     if (!state.complete || recorded.current) return;
     recorded.current = true;
     recordCompletedRun({
-      id: `run-${state.seed}`,
+      id: `run-${crypto.randomUUID()}`,
       teamName: state.ourName,
       tournament: MODE_LABELS[mode].title,
       finalResult: finalResultLabel(state),

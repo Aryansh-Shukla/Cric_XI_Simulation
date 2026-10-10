@@ -10,3 +10,5 @@
 > the editor, so keep the branch in a working state.
 
 <!-- LOVABLE:END -->
+
+- Keep tournament analytics and storylines read-only projections of canonical match and tournament state; persist only completed-run summaries locally so displays cannot diverge from simulation results.
