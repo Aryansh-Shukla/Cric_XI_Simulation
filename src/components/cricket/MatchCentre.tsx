@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, FileText, Pause, Play, SkipForward, X } from "lucide-react";
 import type {
@@ -29,6 +29,14 @@ interface Props {
 
 const isLimited = (r: MatchResult): r is LimitedScorecard =>
   r.format === "T20" || r.format === "ODI";
+
+type PlaybackSpeed = "slow" | "medium" | "fast";
+
+const PLAYBACK_TIMING_MS: Record<PlaybackSpeed, { limited: number; test: number }> = {
+  slow: { limited: 520, test: 5600 },
+  medium: { limited: 260, test: 2800 },
+  fast: { limited: 130, test: 1400 },
+};
 
 export function MatchCentre(props: Props) {
   return (
@@ -123,20 +131,18 @@ function LimitedCentre({
   // One flat cursor across both innings keeps the reveal simple and monotonic.
   const [cursor, setCursor] = useState(0);
   const [playing, setPlaying] = useState(true);
+  const [playbackSpeed, setPlaybackSpeed] = useState<PlaybackSpeed>("fast");
   const [milestone, setMilestone] = useState<Milestone | null>(null);
-  const mounted = useRef(false);
-
-  const step = Math.max(1, Math.ceil(totalBalls / 110));
-
-  useEffect(() => {
-    mounted.current = true;
-  }, []);
+  const playbackStep = playbackSpeed === "fast" ? Math.max(1, Math.ceil(totalBalls / 110)) : 1;
 
   useEffect(() => {
     if (!playing || totalBalls === 0 || cursor >= totalBalls) return;
-    const t = setTimeout(() => setCursor((c) => Math.min(totalBalls, c + step)), 130);
+    const t = setTimeout(
+      () => setCursor((c) => Math.min(totalBalls, c + playbackStep)),
+      PLAYBACK_TIMING_MS[playbackSpeed].limited,
+    );
     return () => clearTimeout(t);
-  }, [playing, cursor, totalBalls, step]);
+  }, [playing, cursor, totalBalls, playbackSpeed, playbackStep]);
 
   // Resolve the flat cursor into an innings + ball index.
   const { inningsIndex, ballIdx, lastGlobal } = useMemo(() => {
@@ -161,15 +167,19 @@ function LimitedCentre({
 
   // Milestone banner: only from milestones actually reached in the revealed balls.
   useEffect(() => {
-    if (!inn || ballIdx === 0) return;
-    for (let i = Math.max(0, ballIdx - step); i < ballIdx; i++) {
-      const ms = milestonesAt(inn, i);
-      if (ms.length) {
-        setMilestone(ms[0]);
-        return;
+    if (cursor === 0) return;
+    let globalIndex = 0;
+    for (const innings of timeline) {
+      for (let i = 0; i < innings.balls.length; i++, globalIndex++) {
+        if (globalIndex < cursor - playbackStep || globalIndex >= cursor) continue;
+        const ms = milestonesAt(innings, i);
+        if (ms.length) {
+          setMilestone(ms[0]);
+          return;
+        }
       }
     }
-  }, [inn, ballIdx, step]);
+  }, [cursor, timeline, playbackStep]);
 
   useEffect(() => {
     if (!milestone) return;
@@ -351,6 +361,8 @@ function LimitedCentre({
       <Controls
         finished={finished}
         playing={playing}
+        playbackSpeed={playbackSpeed}
+        onPlaybackSpeedChange={setPlaybackSpeed}
         onToggle={() => setPlaying((p) => !p)}
         onSkip={() => setCursor(totalBalls)}
         onScorecard={onScorecard}
@@ -415,6 +427,8 @@ function ScoreSide({
 function Controls({
   finished,
   playing,
+  playbackSpeed,
+  onPlaybackSpeedChange,
   onToggle,
   onSkip,
   onScorecard,
@@ -423,6 +437,8 @@ function Controls({
 }: {
   finished: boolean;
   playing: boolean;
+  playbackSpeed?: PlaybackSpeed;
+  onPlaybackSpeedChange?: (speed: PlaybackSpeed) => void;
   onToggle: () => void;
   onSkip: () => void;
   onScorecard: () => void;
@@ -437,39 +453,74 @@ function Controls({
           style={{ width: `${progress}%` }}
         />
       </div>
-      <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[color:var(--border)] px-4 py-3 sm:px-5">
-        {!finished && (
-          <>
-            <button
-              onClick={onToggle}
-              className="btn-ghost-gold inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs"
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[color:var(--border)] px-4 py-3 sm:px-5">
+        {!finished && playbackSpeed && onPlaybackSpeedChange && (
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <span className="text-[10px] font-medium uppercase text-muted-foreground">
+              Playback Speed
+            </span>
+            <div
+              role="group"
+              aria-label="Playback speed"
+              className="inline-flex rounded-lg border border-[color:var(--border)] p-0.5"
             >
-              {playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-              {playing ? "Pause" : "Resume"}
-            </button>
-            <button
-              onClick={onSkip}
-              className="btn-ghost-gold inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs"
-            >
-              <SkipForward className="h-3.5 w-3.5" /> Skip to result
-            </button>
-          </>
+              {(["slow", "medium", "fast"] as const).map((speed) => (
+                <button
+                  key={speed}
+                  type="button"
+                  aria-pressed={playbackSpeed === speed}
+                  onClick={() => onPlaybackSpeedChange(speed)}
+                  className={`min-w-[48px] rounded-md px-2 py-1 text-[11px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${
+                    playbackSpeed === speed
+                      ? "bg-[color:var(--gold)]/15 text-gold"
+                      : "text-muted-foreground hover:bg-[color:var(--muted)] hover:text-foreground"
+                  }`}
+                >
+                  {speed[0]?.toUpperCase()}
+                  {speed.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
         )}
-        {finished && (
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+          {!finished && (
+            <>
+              <button
+                type="button"
+                onClick={onToggle}
+                className="btn-ghost-gold inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs"
+              >
+                {playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+                {playing ? "Pause" : "Resume"}
+              </button>
+              <button
+                type="button"
+                onClick={onSkip}
+                className="btn-ghost-gold inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs"
+              >
+                <SkipForward className="h-3.5 w-3.5" /> Skip to result
+              </button>
+            </>
+          )}
+          {finished && (
+            <button
+              type="button"
+              onClick={onScorecard}
+              className="btn-ghost-gold inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs"
+            >
+              <FileText className="h-3.5 w-3.5" /> Full Scorecard
+            </button>
+          )}
           <button
-            onClick={onScorecard}
-            className="btn-ghost-gold inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs"
+            type="button"
+            onClick={onContinue}
+            className="btn-gold inline-flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-semibold"
           >
-            <FileText className="h-3.5 w-3.5" /> Full Scorecard
+            {finished ? "Continue" : "Close"}{" "}
+            {finished ? <ArrowRight className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
           </button>
-        )}
-        <button
-          onClick={onContinue}
-          className="btn-gold inline-flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-semibold"
-        >
-          {finished ? "Continue" : "Close"}{" "}
-          {finished ? <ArrowRight className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
-        </button>
+        </div>
       </div>
     </>
   );
@@ -489,13 +540,17 @@ function TestCentre({
   const cards = useMemo(() => testProgress(r), [r]);
   const [shown, setShown] = useState(1);
   const [playing, setPlaying] = useState(true);
+  const [playbackSpeed, setPlaybackSpeed] = useState<PlaybackSpeed>("fast");
   const finished = shown >= cards.length;
 
   useEffect(() => {
     if (!playing || finished) return;
-    const t = setTimeout(() => setShown((s) => Math.min(cards.length, s + 1)), 1400);
+    const t = setTimeout(
+      () => setShown((s) => Math.min(cards.length, s + 1)),
+      PLAYBACK_TIMING_MS[playbackSpeed].test,
+    );
     return () => clearTimeout(t);
-  }, [playing, shown, finished, cards.length]);
+  }, [playing, shown, finished, cards.length, playbackSpeed]);
 
   const visible = cards.slice(0, shown);
   const current = visible[visible.length - 1];
@@ -580,6 +635,8 @@ function TestCentre({
       <Controls
         finished={finished}
         playing={playing}
+        playbackSpeed={playbackSpeed}
+        onPlaybackSpeedChange={setPlaybackSpeed}
         onToggle={() => setPlaying((p) => !p)}
         onSkip={() => setShown(cards.length)}
         onScorecard={onScorecard}

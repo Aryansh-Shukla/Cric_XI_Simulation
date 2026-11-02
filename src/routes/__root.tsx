@@ -120,10 +120,6 @@ export const Route = createRootRouteWithContext<{
         content: "website",
       },
       {
-        property: "og:url",
-        content: "https://cric-xi-simulation.vercel.app/",
-      },
-      {
         property: "og:site_name",
         content: "Cricket XI",
       },
@@ -152,10 +148,6 @@ export const Route = createRootRouteWithContext<{
         rel: "icon",
         type: "image/png",
         href: "/favicon.png",
-      },
-      {
-        rel: "canonical",
-        href: "https://cric-xi-simulation.vercel.app/",
       },
     ],
   }),

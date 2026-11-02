@@ -18,14 +18,45 @@ export interface CompletedRun {
 
 const KEY = "cricketxi.topruns.v1";
 
+function isCompletedRun(value: unknown): value is CompletedRun {
+  if (!value || typeof value !== "object") return false;
+  const run = value as Partial<CompletedRun>;
+  return (
+    typeof run.id === "string" &&
+    run.id.length > 0 &&
+    typeof run.teamName === "string" &&
+    run.teamName.trim().length > 0 &&
+    typeof run.tournament === "string" &&
+    run.tournament.trim().length > 0 &&
+    typeof run.finalResult === "string" &&
+    run.finalResult.trim().length > 0 &&
+    typeof run.score === "number" &&
+    Number.isFinite(run.score) &&
+    run.score >= 0 &&
+    Number.isInteger(run.wins) &&
+    Number.isInteger(run.losses) &&
+    Number.isInteger(run.draws) &&
+    (run.wins ?? -1) >= 0 &&
+    (run.losses ?? -1) >= 0 &&
+    (run.draws ?? -1) >= 0 &&
+    typeof run.won === "boolean" &&
+    typeof run.date === "string" &&
+    Number.isFinite(Date.parse(run.date))
+  );
+}
+
 function read(): CompletedRun[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(KEY);
     const parsed: unknown = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed)
-      ? (parsed as CompletedRun[]).filter((r) => typeof r?.score === "number")
-      : [];
+    if (!Array.isArray(parsed)) return [];
+    const ids = new Set<string>();
+    return parsed.filter((entry): entry is CompletedRun => {
+      if (!isCompletedRun(entry) || ids.has(entry.id)) return false;
+      ids.add(entry.id);
+      return true;
+    });
   } catch {
     return [];
   }
@@ -49,6 +80,7 @@ export function recordCompletedRun(run: Omit<CompletedRun, "date"> & { date?: st
   const existing = read();
   if (existing.some((r) => r.id === run.id)) return false;
   const record: CompletedRun = { ...run, date: run.date ?? new Date().toISOString() };
+  if (!isCompletedRun(record)) return false;
   try {
     window.localStorage.setItem(KEY, JSON.stringify(rankRuns([record, ...existing])));
     return true;

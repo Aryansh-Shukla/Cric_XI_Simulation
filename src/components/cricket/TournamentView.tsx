@@ -150,18 +150,23 @@ function TournamentInner({ players, mode, leadership, teamName, onRestart }: Pro
   /** Result currently being played out in the Match Centre. */
   const [live, setLive] = useState<MatchResult | null>(null);
   const recorded = useRef(false);
+  const campaignId = useRef<string | null>(null);
   /** State before the latest match — drives table movement and story moments. */
   const [prevState, setPrevState] = useState<TournamentState | null>(null);
   const [moment, setMoment] = useState<StoryMoment | null>(null);
   const clearMoment = useCallback(() => setMoment(null), []);
 
+  useEffect(() => {
+    campaignId.current ??= `run-${crypto.randomUUID()}`;
+  }, []);
+
   // Record every completed campaign (won or not) exactly once. The tournament
   // seed is the stable id, so re-renders/effects can never duplicate it.
   useEffect(() => {
-    if (!state.complete || recorded.current) return;
+    if (!state.complete || recorded.current || !campaignId.current) return;
     recorded.current = true;
     recordCompletedRun({
-      id: `run-${crypto.randomUUID()}`,
+      id: campaignId.current,
       teamName: state.ourName,
       tournament: MODE_LABELS[mode].title,
       finalResult: finalResultLabel(state),
@@ -1036,10 +1041,10 @@ function Confetti() {
   return (
     <div className="pointer-events-none fixed inset-0 z-50 overflow-hidden">
       {pieces.map((_, i) => {
-        const left = Math.random() * 100;
-        const delay = Math.random() * 0.4;
-        const duration = 2 + Math.random() * 1.5;
-        const colors = ["var(--gold)", "var(--accent)", "#fff"];
+        const left = (i * 37 + 13) % 100;
+        const delay = ((i * 7) % 41) / 100;
+        const duration = 2 + ((i * 11) % 16) / 10;
+        const colors = ["var(--gold)", "var(--accent)", "var(--foreground)"];
         const bg = colors[i % colors.length];
         return (
           <motion.span

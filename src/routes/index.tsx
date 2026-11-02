@@ -24,7 +24,23 @@ export const Route = createFileRoute("/")({
           "Build a team from cricket history and guide them through an original tournament simulation.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://cric-xi-simulation.vercel.app/" },
+      {
+        name: "twitter:title",
+        content: "Cricket XI — Draft Legends, Build Dynasties",
+      },
+      {
+        name: "twitter:description",
+        content:
+          "Draft a historical cricket XI, lead your team through iconic tournaments, and relive every match in Cricket XI.",
+      },
       { name: "twitter:card", content: "summary" },
+    ],
+    links: [
+      {
+        rel: "canonical",
+        href: "https://cric-xi-simulation.vercel.app/",
+      },
     ],
   }),
   component: Index,
