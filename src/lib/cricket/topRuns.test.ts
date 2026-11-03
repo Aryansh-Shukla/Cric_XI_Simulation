@@ -61,9 +61,7 @@ describe("Top Runs local history", () => {
     const readStorage = installStorage();
     expect(recordCompletedRun(completedRun({ id: "low", score: 80 }))).toBe(true);
     expect(recordCompletedRun(completedRun({ id: "high", score: 140, won: true }))).toBe(true);
-    expect(recordCompletedRun(completedRun({ id: "high", score: 140, won: true }))).toBe(
-      false,
-    );
+    expect(recordCompletedRun(completedRun({ id: "high", score: 140, won: true }))).toBe(false);
 
     expect(listTopRuns().map((run) => run.id)).toEqual(["high", "low"]);
     expect(JSON.parse(readStorage() ?? "[]")).toHaveLength(2);
