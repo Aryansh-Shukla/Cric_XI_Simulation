@@ -1,7 +1,10 @@
-import { afterEach, describe, expect, test } from "bun:test";
 import { listTopRuns, recordCompletedRun, type CompletedRun } from "./topRuns";
 
 const originalWindow = globalThis.window;
+
+function assert(condition: boolean, message: string): void {
+  if (!condition) throw new Error(message);
+}
 
 function installStorage(initial: string | null = null) {
   let value = initial;
@@ -35,15 +38,15 @@ function completedRun(overrides: Partial<CompletedRun> = {}): CompletedRun {
   };
 }
 
-afterEach(() => {
+function restoreWindow(): void {
   Object.defineProperty(globalThis, "window", {
     configurable: true,
     value: originalWindow,
   });
-});
+}
 
-describe("Top Runs local history", () => {
-  test("ignores malformed and duplicate stored records", () => {
+function testMalformedAndDuplicateRecords(): void {
+  try {
     installStorage(
       JSON.stringify([
         completedRun(),
@@ -53,17 +56,39 @@ describe("Top Runs local history", () => {
       ]),
     );
 
-    expect(listTopRuns()).toHaveLength(1);
-    expect(listTopRuns()[0]?.teamName).toBe("Legends XI");
-  });
+    const runs = listTopRuns();
+    assert(runs.length === 1, "malformed and duplicate records should be filtered");
+    assert(runs[0]?.teamName === "Legends XI", "the first valid record should remain");
+  } finally {
+    restoreWindow();
+  }
+}
 
-  test("records each completed run once and ranks by score", () => {
+function testDeduplicationAndScoreRanking(): void {
+  try {
     const readStorage = installStorage();
-    expect(recordCompletedRun(completedRun({ id: "low", score: 80 }))).toBe(true);
-    expect(recordCompletedRun(completedRun({ id: "high", score: 140, won: true }))).toBe(true);
-    expect(recordCompletedRun(completedRun({ id: "high", score: 140, won: true }))).toBe(false);
+    assert(recordCompletedRun(completedRun({ id: "low", score: 80 })), "low run should save");
+    assert(
+      recordCompletedRun(completedRun({ id: "high", score: 140, won: true })),
+      "high run should save",
+    );
+    assert(
+      !recordCompletedRun(completedRun({ id: "high", score: 140, won: true })),
+      "duplicate run id should be rejected",
+    );
 
-    expect(listTopRuns().map((run) => run.id)).toEqual(["high", "low"]);
-    expect(JSON.parse(readStorage() ?? "[]")).toHaveLength(2);
-  });
-});
+    assert(
+      listTopRuns()
+        .map((run) => run.id)
+        .join(",") === "high,low",
+      "completed runs should rank by descending score",
+    );
+    assert(JSON.parse(readStorage() ?? "[]").length === 2, "only unique runs should be stored");
+  } finally {
+    restoreWindow();
+  }
+}
+
+testMalformedAndDuplicateRecords();
+testDeduplicationAndScoreRanking();
+console.log("Top Runs integrity: 2 checks passed");
