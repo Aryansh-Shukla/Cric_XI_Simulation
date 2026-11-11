@@ -1,10 +1,7 @@
+import { strict as assert } from "node:assert";
 import { listTopRuns, recordCompletedRun, type CompletedRun } from "./topRuns";
 
 const originalWindow = globalThis.window;
-
-function assert(condition: boolean, message: string): void {
-  if (!condition) throw new Error(message);
-}
 
 function installStorage(initial: string | null = null) {
   let value = initial;
