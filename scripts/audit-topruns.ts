@@ -1,5 +1,5 @@
 import { strict as assert } from "node:assert";
-import { listTopRuns, recordCompletedRun, type CompletedRun } from "./topRuns";
+import { listTopRuns, recordCompletedRun, type CompletedRun } from "../src/lib/cricket/topRuns";
 
 const originalWindow = globalThis.window;
 
