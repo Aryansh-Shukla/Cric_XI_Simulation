@@ -12,3 +12,4 @@
 <!-- LOVABLE:END -->
 
 - Keep tournament analytics and storylines read-only projections of canonical match and tournament state; persist only completed-run summaries locally so displays cannot diverge from simulation results.
+- Keep deterministic validation and integrity checks as standalone scripts under `scripts/`, using production modules as the source of truth so repository checks do not require a test-only runtime.
