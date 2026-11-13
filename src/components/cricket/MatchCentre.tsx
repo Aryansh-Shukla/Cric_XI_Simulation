@@ -470,7 +470,7 @@ function Controls({
                   type="button"
                   aria-pressed={playbackSpeed === speed}
                   onClick={() => onPlaybackSpeedChange(speed)}
-                  className={`min-w-[48px] rounded-md px-2 py-1 text-[11px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${
+                  className={`min-h-10 min-w-[52px] rounded-md px-2 text-[11px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${
                     playbackSpeed === speed
                       ? "bg-[color:var(--gold)]/15 text-gold"
                       : "text-muted-foreground hover:bg-[color:var(--muted)] hover:text-foreground"
