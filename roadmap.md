@@ -6,7 +6,9 @@
 
 # Run 4: Final Polish and Release Readiness
 
-- [ ] Add and verify live Slow/Medium/Fast Match Centre playback without changing match outcomes.
-- [ ] Harden completed-run validation and verify tournament progression across all five formats.
-- [ ] Align page metadata and confirm mobile, hydration, and public SEO assets.
-- [ ] Run typecheck, lint, production build, security audit, and targeted regression checks.
+- [x] Add and verify live Slow/Medium/Fast Match Centre playback without changing match outcomes.
+- [x] Harden completed-run validation and algorithmically verify tournament progression across all five formats.
+- [x] Align page metadata and confirm mobile presentation and public SEO assets.
+- [x] Run typecheck, changed-file lint, production build, package audit, and targeted regression checks.
+
+Release-readiness limits: the live browser journey covered ODI, including speed switching, pause/resume, skip, close, and mobile fit; full UI journeys in every format and Test replay were not completed. All five formats passed campaign and canonical timeline audits. Repository-wide lint still reports pre-existing audit-script issues, and one high Zod advisory remains because the compatible dependency range is Zod 3 while Zod 4 would be a breaking major upgrade.
