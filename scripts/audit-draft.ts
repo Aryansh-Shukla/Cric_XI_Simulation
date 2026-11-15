@@ -6,11 +6,11 @@ import type { GameMode, Player } from "@/lib/cricket/types";
 const modes: GameMode[] = ["ODI_WC", "T20_WC", "CHAMPIONS", "FRANCHISE_T20", "TEST"];
 for (const mode of modes) {
   const pool = DraftPoolService.getPool(mode);
+  const runs = 3000;
   let deadEnds = 0,
     invalidXI = 0,
     dupes = 0,
-    overseasBreach = 0,
-    runs = 3000;
+    overseasBreach = 0;
   for (let r = 0; r < runs; r++) {
     const picked: Player[] = [];
     for (let round = 0; round < 11; round++) {
